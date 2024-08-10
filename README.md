@@ -1,6 +1,6 @@
 Rendering models and techniques for JMonkeyEngine using [Renthyl](https://github.com/codex128/Renthyl) FrameGraphs.
 
-:warning: Warning! :warning:
+:warning: **Warning!** :warning:<br>
 This project is still under development!
 
 ## Features
