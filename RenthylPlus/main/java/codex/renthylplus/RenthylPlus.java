@@ -50,9 +50,9 @@ import com.jme3.asset.AssetManager;
  * 
  * @author codex
  */
-public class FrameGraphFactory {
+public class RenthylPlus {
     
-    private FrameGraphFactory() {}
+    private RenthylPlus() {}
     
     /**
      * Constructs a standard forward FrameGraph, with no controllable settings.

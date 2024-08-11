@@ -29,7 +29,7 @@
 package codex.renthyl.tests;
 
 import codex.renthyl.FrameGraph;
-import codex.renthylplus.FrameGraphFactory;
+import codex.renthylplus.RenthylPlus;
 import codex.renthyl.Renthyl;
 import codex.renthyl.client.MatParamTargetControl;
 import codex.renthyl.modules.Attribute;
@@ -63,7 +63,7 @@ public class TestDeferred extends TestApplication implements ActionListener {
         
         Renthyl.initialize(this);
         
-        fg = FrameGraphFactory.deferred(assetManager);
+        fg = RenthylPlus.deferred(assetManager);
         viewPort.setPipeline(fg);
         
         setupAll();

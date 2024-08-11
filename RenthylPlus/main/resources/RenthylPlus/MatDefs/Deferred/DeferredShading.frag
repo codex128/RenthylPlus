@@ -10,7 +10,7 @@
 #import "RenthylPlus/ShaderLib/Octahedral.glsllib"
 
 uniform vec4 g_AmbientLightColor;
-#import "FrameGraphCommon/ShaderLib/SkyLightReflectionProbe.glsllib"
+#import "RenthylCore/ShaderLib/SkyLightReflectionProbe.glsllib"
 
 varying vec2 texCoord;
 

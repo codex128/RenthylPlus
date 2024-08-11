@@ -1,6 +1,6 @@
 Technique GBufferPass {
         
-    VertexShader   GLSL310 GLSL300 GLSL150 GLSL100 : RenthylPlus/MatDefs/Misc/Unshaded.vert
+    VertexShader   GLSL310 GLSL300 GLSL150 GLSL100 : Common/MatDefs/Misc/Unshaded.vert
     FragmentShader GLSL310 GLSL300 GLSL150 GLSL100 : RenthylPlus/MatDefs/GBuffer/Unshaded.frag
 
     WorldParameters {
