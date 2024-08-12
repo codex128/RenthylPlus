@@ -4,22 +4,19 @@
  */
 package codex.renthylplus.shadow;
 
+import codex.renthyl.FGRenderContext;
 import codex.renthyl.GeometryQueue;
 import com.jme3.bounding.BoundingBox;
 import com.jme3.bounding.BoundingVolume;
 import com.jme3.light.DirectionalLight;
 import com.jme3.light.Light;
-import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.FastMath;
 import com.jme3.math.Matrix4f;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
 import com.jme3.renderer.ViewPort;
-import com.jme3.renderer.queue.GeometryList;
-import com.jme3.renderer.queue.OpaqueComparator;
 import com.jme3.scene.Geometry;
-import com.jme3.scene.Spatial;
 import com.jme3.shadow.PssmShadowUtil;
 import com.jme3.shadow.ShadowUtil;
 import static com.jme3.shadow.ShadowUtil.computeBoundForPoints;
@@ -31,7 +28,7 @@ import static java.lang.Math.min;
  *
  * @author codex
  */
-public class DirectionalShadowPass extends ShadowPass<DirectionalLight> {
+public class DirectionalShadowPass extends ShadowOcclusionPass<DirectionalLight> {
     
     private float lambda = 0.65f;    
     private Camera shadowCam;
@@ -48,7 +45,9 @@ public class DirectionalShadowPass extends ShadowPass<DirectionalLight> {
     }
 
     @Override
-    protected void configureShadowCams(DirectionalLight light, Camera viewCam) {
+    protected Camera getShadowCamera(FGRenderContext context, GeometryQueue occluders, DirectionalLight light, int index) {
+        
+        Camera viewCam = context.getViewPort().getCamera();
         
         float zFar = zFarOverride;
         if (zFar == 0) {
@@ -68,11 +67,11 @@ public class DirectionalShadowPass extends ShadowPass<DirectionalLight> {
 
         // in parallel projection shadow position goes from 0 to 1
         if (viewCam.isParallelProjection()) {
-            for (int i = 0; i < nbShadowMaps; i++) {
-                splitsArray[i] = splitsArray[i]/(zFar- frustumNear);
+            for (int i = 0; i < numShadowMaps; i++) {
+                splitsArray[i] = splitsArray[i]/(zFar-frustumNear);
             }
         }
-
+        
         switch (splitsArray.length) {
             case 5:
                 splits.a = splitsArray[4];
@@ -86,40 +85,13 @@ public class DirectionalShadowPass extends ShadowPass<DirectionalLight> {
                 break;
         }
         
-    }
-    
-    @Override
-    protected boolean isLightInView(Camera viewCam, DirectionalLight light) {
-        return true;
-    }
-
-    @Override
-    protected Camera getShadowCam(int shadowMapIndex) {
+        updateShadowCamera(context.getViewPort(), shadowCam, points, occluders, shadowMapDef.getWidth());
+        
         return shadowCam;
-    }
-
-    @Override
-    protected void updateShadowCam(ViewPort viewPort, GeometryQueue occluders, GeometryQueue receivers, int shadowMapIndex) {
-        Camera viewCam = viewPort.getCamera();
-        ShadowUtil.updateFrustumPoints(viewCam, splitsArray[shadowMapIndex], splitsArray[shadowMapIndex+1], 1.0f, points);
-        updateShadowCamera(viewPort, receivers, shadowCam, points, occluders, zFarOverride);
+        
     }
     
-    @Override
-    protected void setupReceiverMaterial(Material mat) {
-        super.setupReceiverMaterial(mat);
-        mat.setColor("Splits", splits);
-        mat.setVector3("LightDir", lightSource.getDirection());
-    }
-    
-    @Override
-    protected void cleanupReceiverMaterial(Material mat) {
-        super.cleanupReceiverMaterial(mat);
-        mat.clearParam("Splits");
-        mat.clearParam("LightDir");
-    }
-    
-    public static void updateShadowCamera(ViewPort viewPort, GeometryQueue receivers, Camera shadowCam,
+    public static void updateShadowCamera(ViewPort viewPort, Camera shadowCam,
             Vector3f[] points, GeometryQueue splitOccluders, float shadowMapSize) {
 
         boolean ortho = shadowCam.isParallelProjection();
@@ -259,6 +231,11 @@ public class DirectionalShadowPass extends ShadowPass<DirectionalLight> {
         vars.release();
 
         shadowCam.setProjectionMatrix(result);
+    }
+
+    @Override
+    protected boolean lightSourceInsideFrustum(Camera cam, DirectionalLight light) {
+        return true;
     }
     
 }

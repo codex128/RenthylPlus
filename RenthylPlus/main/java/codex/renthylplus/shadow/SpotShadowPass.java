@@ -4,6 +4,7 @@
  */
 package codex.renthylplus.shadow;
 
+import codex.renthyl.FGRenderContext;
 import codex.renthyl.GeometryQueue;
 import com.jme3.light.Light;
 import com.jme3.light.SpotLight;
@@ -19,65 +20,39 @@ import com.jme3.util.TempVars;
  *
  * @author codex
  */
-public class SpotShadowPass extends ShadowPass<SpotLight> {
+public class SpotShadowPass extends ShadowOcclusionPass<SpotLight> {
     
-    protected Camera shadowCam;    
-    protected SpotLight light;
-    protected final Vector3f[] points = new Vector3f[8];
+    private final Camera shadowCam;
+    private final Vector3f direction = new Vector3f();
+    private float range = -1;
+    private float outerAngle = -1;
     
-    public SpotShadowPass(int shadowMapSize) {
-        super(Light.Type.Spot, 1, shadowMapSize);
-        shadowCam = new Camera(this.shadowMapSize, this.shadowMapSize);
-        for (int i = 0; i < points.length; i++) {
-            points[i] = new Vector3f();
+    public SpotShadowPass(int size) {
+        super(Light.Type.Spot, 1, size);
+        shadowCam = new Camera(shadowMapDef.getMapDef().getWidth(), shadowMapDef.getMapDef().getHeight());
+    }
+
+    @Override
+    protected Camera getShadowCamera(FGRenderContext context, GeometryQueue occluders, SpotLight light, int index) {
+        
+        if (range != light.getSpotRange() || outerAngle != light.getSpotOuterAngle()
+                || !shadowCam.getLocation().equals(light.getPosition()) || !direction.equals(light.getDirection())) {
+            range = light.getSpotRange();
+            outerAngle = light.getSpotOuterAngle();
+            direction.set(light.getDirection());
+            shadowCam.setFrustumPerspective(outerAngle * FastMath.RAD_TO_DEG * 2, 1, 1, range);
+            shadowCam.getRotation().lookAt(direction, shadowCam.getUp());
+            shadowCam.setLocation(light.getPosition());
+            shadowCam.update();
+            shadowCam.updateViewProjection();
         }
-    }
-
-    @Override
-    protected void configureShadowCams(SpotLight light, Camera viewCam) {
-        float zFar = zFarOverride;
-        if (zFar == 0) {
-            zFar = viewCam.getFrustumFar();
-        }
-
-        //We prevent computing the frustum points and splits with zeroed or negative near clip value
-        float frustumNear = Math.max(viewCam.getFrustumNear(), 0.001f);
-        ShadowUtil.updateFrustumPoints(viewCam, frustumNear, zFar, 1.0f, points);
-
-        shadowCam.setFrustumPerspective(light.getSpotOuterAngle() * FastMath.RAD_TO_DEG * 2.0f, 1, 1f, light.getSpotRange());
-        shadowCam.getRotation().lookAt(light.getDirection(), shadowCam.getUp());
-        shadowCam.setLocation(light.getPosition());
-
-        shadowCam.update();
-        shadowCam.updateViewProjection();
-    }
-
-    @Override
-    protected void updateShadowCam(ViewPort viewPort, GeometryQueue occluders, GeometryQueue receivers, int shadowMapIndex) {}
-
-    @Override
-    protected boolean isLightInView(Camera viewCam, SpotLight light) {
-        TempVars vars = TempVars.get();
-        boolean intersects = light.intersectsFrustum(viewCam,vars);
-        vars.release();
-        return intersects;
-    }
-
-    @Override
-    protected Camera getShadowCam(int shadowMapIndex) {
+        
         return shadowCam;
+        
     }
-    
     @Override
-    protected void setupReceiverMaterial(Material material) {    
-         material.setVector3("LightPos", lightSource.getPosition());
-         material.setVector3("LightDir", lightSource.getDirection());
-    }
-
-    @Override
-    protected void cleanupReceiverMaterial(Material material) {
-        material.clearParam("LightPos");
-        material.clearParam("LightDir");
+    protected boolean lightSourceInsideFrustum(Camera cam, SpotLight light) {
+        return cam.contains(light.getPosition());
     }
     
 }

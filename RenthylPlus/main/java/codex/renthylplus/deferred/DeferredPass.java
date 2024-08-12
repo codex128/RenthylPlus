@@ -30,7 +30,6 @@ package codex.renthylplus.deferred;
 
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
-import codex.renthyl.GraphRenderException;
 import codex.renthyl.resources.ResourceTicket;
 import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.modules.RenderPass;
