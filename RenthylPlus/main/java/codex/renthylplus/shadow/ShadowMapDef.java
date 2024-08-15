@@ -4,7 +4,7 @@
  */
 package codex.renthylplus.shadow;
 
-import codex.renthyl.definitions.ResourceDef;
+import codex.renthyl.definitions.AbstractResourceDef;
 import codex.renthyl.definitions.TextureDef;
 import com.jme3.texture.Image;
 import com.jme3.texture.Texture;
@@ -14,7 +14,7 @@ import com.jme3.texture.Texture2D;
  *
  * @author gary
  */
-public class ShadowMapDef implements ResourceDef<ShadowMap> {
+public class ShadowMapDef extends AbstractResourceDef<ShadowMap> {
 
     private TextureDef<Texture2D> mapDef = TextureDef.texture2D();
     

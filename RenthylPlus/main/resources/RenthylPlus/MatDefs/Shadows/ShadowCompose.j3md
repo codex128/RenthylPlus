@@ -1,0 +1,26 @@
+MaterialDef ShadowCompose {
+    
+    MaterialParameters {
+        
+        Texture2D SceneDepthMap
+        Texture2D ShadowMap
+        Matrix4 CamViewProjectionInverse
+        Matrix4 LightViewProjectionMatrix
+        Int LightIndex
+        Int LightType
+        Vector2 LightRange
+        
+    }
+    
+    Technique {
+    
+        VertexShader GLSL330 GLSL300 GLSL150 : RenthylCore/MatDefs/Fullscreen/Screen.vert
+        FragmentShader GLSL330 GLSL300 GLSL150 : RenthylPlus/MatDefs/Shadows/ShadowCompose.frag
+        
+        WorldParameters {
+            Time
+        }
+        
+    }
+    
+}

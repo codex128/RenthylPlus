@@ -239,6 +239,8 @@ void main(){
             vec4 emissive = m_Emissive;
         #endif
         outGBuffer2.rgb = (emissive * pow(emissive.a, m_EmissivePower) * m_EmissiveIntensity).rgb;
+    #else
+        outGBuffer2.rgb = vec3(0.0);
     #endif
     // pack
     vec2 n1 = octEncode(normal);

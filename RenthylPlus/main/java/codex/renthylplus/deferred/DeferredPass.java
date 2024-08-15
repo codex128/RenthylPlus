@@ -123,10 +123,12 @@ public class DeferredPass extends RenderPass implements TechniqueDefLogic {
     private ResourceTicket<Integer> numLights;
     private ResourceTicket<ColorRGBA> ambient;
     private ResourceTicket<List<LightProbe>> probes;
+    private ResourceTicket<Texture2D> lightContribution;
     private final TextureDef<Texture2D> colorDef = TextureDef.texture2D();
     private Material material;
     private final Texture2D[] lightTextures = new Texture2D[3];
     private final Texture2D[] tileTextures = new Texture2D[2];
+    private Texture2D lightContributionMap;
     private final ColorRGBA ambientColor = new ColorRGBA();
     private List<LightProbe> probeList;
     
@@ -144,6 +146,7 @@ public class DeferredPass extends RenderPass implements TechniqueDefLogic {
         numLights = addInput("NumLights");
         ambient = addInput("Ambient");
         probes = addInput("Probes");
+        lightContribution = addInput("LightContribution");
         outColor = addOutput("Color");
         colorDef.setFormatFlexible(true);
         assetManager = frameGraph.getAssetManager();
@@ -161,6 +164,7 @@ public class DeferredPass extends RenderPass implements TechniqueDefLogic {
         referenceOptional(lights, numLights, ambient, probes);
         referenceOptional(getGroupArray("LightTextures"));
         referenceOptional(getGroupArray("TileTextures"));
+        referenceOptional(lightContribution);
     }
     @Override
     protected void execute(FGRenderContext context) {
@@ -186,6 +190,8 @@ public class DeferredPass extends RenderPass implements TechniqueDefLogic {
         
         // render
         acquireArrayOrElse("LightTextures", lightTextures, null);
+        lightContributionMap = resources.acquireOrElse(lightContribution, null);
+        material.setTexture("LightContributionMap", lightContributionMap);
         if (lightTextures[0] == null) {
             context.getScreen().render(context.getRenderManager(), material, resources.acquire(lights));
         } else {
@@ -235,6 +241,8 @@ public class DeferredPass extends RenderPass implements TechniqueDefLogic {
         // this may need to be changed to only be enabled when there is an ambient light present
         defines.set(defs.useAmbientLight, true);
         defines.set(defs.numProbes, getNumReadyProbes(probeList));
+        defines.set(defs.useShadows, lightContributionMap != null);
+        //defines.set(defs.useShadows, false);
         return active.getShader(assetManager, rendererCaps, defines);
     }
     @Override
@@ -360,9 +368,10 @@ public class DeferredPass extends RenderPass implements TechniqueDefLogic {
         private static final String DEFINE_USE_LIGHT_TEXTURES = "USE_LIGHT_TEXTURES";
         private static final String DEFINE_USE_AMBIENT_LIGHT = "USE_AMBIENT_LIGHT";
         private static final String DEFINE_TILED_LIGHTS = "TILED_LIGHTS";
+        private static final String DEFINE_USE_SHADOWS = "SHADOWS";
         
         private static final HashMap<TechniqueDef, Defines> defMap = new HashMap<>();
-        public final int numLights, useTextures, numProbes, useAmbientLight, useTiles;
+        public final int numLights, useTextures, numProbes, useAmbientLight, useTiles, useShadows;
         
         public Defines(TechniqueDef def) {
             numLights = def.addShaderUnmappedDefine(DEFINE_NB_LIGHTS, VarType.Int);
@@ -370,6 +379,7 @@ public class DeferredPass extends RenderPass implements TechniqueDefLogic {
             useTextures = def.addShaderUnmappedDefine(DEFINE_USE_LIGHT_TEXTURES, VarType.Boolean);
             useAmbientLight = def.addShaderUnmappedDefine(DEFINE_USE_AMBIENT_LIGHT, VarType.Boolean);
             useTiles = def.addShaderUnmappedDefine(DEFINE_TILED_LIGHTS, VarType.Boolean);
+            useShadows = def.addShaderUnmappedDefine(DEFINE_USE_SHADOWS, VarType.Boolean);
         }
         
         public static Defines config(TechniqueDef technique) {

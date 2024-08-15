@@ -25,6 +25,7 @@ uniform int m_NBLights;
         uniform sampler2D m_LightTex2;
         uniform sampler2D m_LightTex3;
         uniform float m_LightTexInv;
+        #define INCREMENT_LIGHT i++
         #ifdef TILED_LIGHTS
             uniform sampler2D m_Tiles;
             uniform sampler2D m_LightIndex;
@@ -33,6 +34,10 @@ uniform int m_NBLights;
         #endif
     #else
         uniform vec4 g_LightData[NB_LIGHTS];
+        #define INCREMENT_LIGHT i += 3
+    #endif
+    #ifdef SHADOWS
+        uniform sampler2D m_LightContributionMap;
     #endif
 #endif
 
@@ -74,9 +79,9 @@ void main(){
             int componentIndex = int(tileInfo.z);
             int lightCount = int(tileInfo.w);
             vec4 lightIndex = vec4(-1.0);
-            for (int i = 0; i < lightCount;) {
+            for (int i = 0; i < lightCount; INCREMENT_LIGHT) {
             #else
-            for (int i = 0; i < NB_LIGHTS;) {
+            for (int i = 0; i < NB_LIGHTS; INCREMENT_LIGHT) {
             #endif
                 #ifdef USE_LIGHT_TEXTURES
                     #ifdef TILED_LIGHTS
@@ -111,14 +116,25 @@ void main(){
                     vec4 lightColor = g_LightData[i];
                     vec4 lightData1 = g_LightData[i+1];
                 #endif
+                #ifdef SHADOWS
+                    int shadowIndex = int(lightColor.w) >> 2;
+                    if (shadowIndex > 0) {
+                        int table = int(texture2D(m_LightContributionMap, innerTexCoord).r);
+                        if (((table >> (shadowIndex - 1)) & 1) == 1) {
+                            INCREMENT_LIGHT;
+                            continue;
+                        }
+                    }
+                #endif
+                int lightType = int(lightColor.w) & 3;
                 vec4 lightDir;
                 vec3 lightVec;
-                lightComputeDir(vPos, lightColor.w, lightData1, lightDir, lightVec);
+                lightComputeDir(vPos, lightType, lightData1, lightDir, lightVec);
 
                 float spotFallOff = 1.0;
                 #if __VERSION__ >= 110
                 // allow use of control flow
-                if (lightColor.w > 1.0) {
+                if (lightType > 1.0) {
                 #endif
                     #ifdef USE_LIGHT_TEXTURES
                         spotFallOff = computeSpotFalloff(texture2D(m_LightTex3, pixel), lightVec);
@@ -143,10 +159,9 @@ void main(){
                 gl_FragColor.rgb += lightColor.rgb * diffuseColor.rgb  * vec3(light.x) +
                                     lightColor.rgb * specularColor.rgb * vec3(light.y);
                 
-                #ifdef USE_LIGHT_TEXTURES
-                    i++;
-                #else
-                    i += 3;
+                #ifdef SHADOW
+                        }
+                    }
                 #endif
             }
         #endif
@@ -183,9 +198,9 @@ void main(){
             int componentIndex = int(tileInfo.z);
             int lightCount = int(tileInfo.w);
             vec4 lightIndex = vec4(-1.0);
-            for (int i = 0; i < lightCount;) {
+            for (int i = 0; i < lightCount; INCREMENT_LIGHT) {
             #else
-            for (int i = 0; i < NB_LIGHTS;) {
+            for (int i = 0; i < NB_LIGHTS; INCREMENT_LIGHT) {
             #endif
                 #ifdef USE_LIGHT_TEXTURES
                     #ifdef TILED_LIGHTS
@@ -221,14 +236,28 @@ void main(){
                     vec4 lightData1 = g_LightData[i+1];
                 #endif
                 
+                #ifdef SHADOWS
+                    int shadowIndex = int(lightColor.w) >> 2;
+                    if (shadowIndex > 0) {
+                        shadowIndex--;
+                        int table = int(texture2D(m_LightContributionMap, innerTexCoord).r);
+                        // if the bit at the index is zero, this light is casting
+                        // a shadow here
+                        if (((table >> shadowIndex) & 1) == 0) {
+                            continue;
+                        }
+                    }
+                #endif
+                int lightType = int(lightColor.w);
+                
                 vec4 lightDir;
                 vec3 lightVec;
-                lightComputeDir(vPos, lightColor.w, lightData1, lightDir, lightVec);
+                lightComputeDir(vPos, lightType, lightData1, lightDir, lightVec);
 
                 float spotFallOff = 1.0;
                 #if __VERSION__ >= 110
                 // allow use of control flow
-                if (lightColor.w > 1.0) {
+                if (lightType > 1.0) {
                 #endif
                     #if USE_LIGHT_TEXTURES
                     spotFallOff = computeSpotFalloff(texture2D(m_LightTex3, pixel), lightVec);
@@ -240,10 +269,10 @@ void main(){
                 #endif
                 spotFallOff *= lightDir.w;
                 
-                float radius = 1.0 / lightData1.w;
-                if (distance(vPos, lightData1.xyz) < radius) {
+                //float radius = 1.0 / lightData1.w;
+                //if (distance(vPos, lightData1.xyz) < radius) {
                     //gl_FragColor.rgb += lightColor.rgb * spotFallOff;
-                }
+                //}
 
                 #ifdef NORMALMAP
                 //Normal map -> lighting is computed in tangent space
@@ -264,12 +293,6 @@ void main(){
                 gl_FragColor.rgb += directLighting * spotFallOff;
                 
                 //gl_FragColor.rgb += directSpecular;
-                
-                #if USE_LIGHT_TEXTURES
-                i++;
-                #else
-                i += 3;
-                #endif
             }
         #endif
         // skyLight and reflectionProbe

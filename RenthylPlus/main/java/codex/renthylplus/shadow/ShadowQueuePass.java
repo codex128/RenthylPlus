@@ -18,7 +18,7 @@ import com.jme3.scene.Geometry;
  *
  * @author codex
  */
-public class ShadowSortPass extends RenderPass {
+public class ShadowQueuePass extends RenderPass {
 
     private ResourceTicket<GeometryQueue> geometry, occluders, receivers;
     private GeometryQueue occluderQueue, receiverQueue;
@@ -46,7 +46,7 @@ public class ShadowSortPass extends RenderPass {
             receiverQueue = new GeometryQueue(new OpaqueComparator(), numGeoms);
         }
         for (Geometry g : source) {
-            RenderQueue.ShadowMode mode = g.getUserData(SpatialWorldParam.Shadow.RESULT);
+            RenderQueue.ShadowMode mode = SpatialWorldParam.ShadowModeParam.getWorldValue(g);
             if (mode != null) {
                 boolean all = mode == RenderQueue.ShadowMode.CastAndReceive;
                 if (all || mode == RenderQueue.ShadowMode.Cast) {
@@ -62,8 +62,12 @@ public class ShadowSortPass extends RenderPass {
     }
     @Override
     protected void reset(FGRenderContext context) {
-        occluderQueue.clear();
-        receiverQueue.clear();
+        if (occluderQueue != null) {
+            occluderQueue.clear();
+        }
+        if (receiverQueue != null) {
+            receiverQueue.clear();
+        }
     }
     @Override
     protected void cleanup(FrameGraph frameGraph) {}

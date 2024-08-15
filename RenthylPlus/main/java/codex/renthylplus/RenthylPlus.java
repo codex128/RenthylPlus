@@ -40,9 +40,11 @@ import codex.renthylplus.deferred.DeferredPass;
 import codex.renthylplus.light.LightImagePass;
 import codex.renthyl.client.GraphSetting;
 import codex.renthyl.light.TiledRenderGrid;
-import codex.renthyl.modules.RenderContainer;
-import codex.renthyl.modules.RenderModule;
 import codex.renthyl.modules.RenderThread;
+import codex.renthyl.util.SpatialWorldParam;
+import codex.renthylplus.shadow.ShadowComposerPass;
+import codex.renthylplus.shadow.ShadowQueuePass;
+import codex.renthylplus.shadow.SpotShadowPass;
 import com.jme3.asset.AssetManager;
 
 /**
@@ -53,33 +55,6 @@ import com.jme3.asset.AssetManager;
 public class RenthylPlus {
     
     private RenthylPlus() {}
-    
-    /**
-     * Constructs a standard forward FrameGraph, with no controllable settings.
-     * 
-     * @param assetManager
-     * @return forward framegraph
-     */
-    public static FrameGraph forward(AssetManager assetManager) {
-        
-        FrameGraph fg = new FrameGraph(assetManager);
-        fg.setName("Forward");
-        
-        SceneEnqueuePass enqueue = fg.add(new SceneEnqueuePass(true, true));
-        QueueMergePass merge = fg.add(new QueueMergePass(5));
-        OutputGeometryPass out = fg.add(new OutputGeometryPass());
-        
-        merge.makeInput(enqueue, "Opaque", "Queues[0]");
-        merge.makeInput(enqueue, "Sky", "Queues[1]");
-        merge.makeInput(enqueue, "Transparent", "Queues[2]");
-        merge.makeInput(enqueue, "Gui", "Queues[3]");
-        merge.makeInput(enqueue, "Translucent", "Queues[4]");
-        
-        out.makeInput(merge, "Result", "Geometry");
-        
-        return fg;
-        
-    }
     
     /**
      * Constructs a deferred FrameGraph.
@@ -93,8 +68,17 @@ public class RenthylPlus {
         fg.setName("Deferred");
         
         GraphSetting<Integer> async = new GraphSetting<>("Async", 0);
+        //fg.add(new TimeGuard(2, 3000));
         
         SceneEnqueuePass enqueue = fg.add(new SceneEnqueuePass(true, true));
+        QueueMergePass mergeForShadows = fg.add(new QueueMergePass(5));
+        ShadowQueuePass shadowQueue = fg.add(new ShadowQueuePass());
+        SpotShadowPass lightShadows = fg.add(new SpotShadowPass(1024));
+        SpotShadowPass lightShadows2 = fg.add(new SpotShadowPass(1024));
+        ShadowComposerPass shadowCompose = fg.add(new ShadowComposerPass());
+        Attribute shadowDepthDebug = fg.add(new Attribute());
+        Attribute lightContrDebug = fg.add(new Attribute());
+        Attribute shadowOut = fg.add(new Attribute());
         Attribute tileInfoAttr = fg.add(new Attribute());
         Junction tileJunct1 = fg.add(new Junction(1, 1));
         GBufferPass gbuf = fg.add(new GBufferPass());
@@ -108,6 +92,32 @@ public class RenthylPlus {
         QueueMergePass merge = fg.add(new RenderThread(async)).add(new QueueMergePass(4));
         OutputGeometryPass geometry = fg.add(new OutputGeometryPass());
         
+        enqueue.addWorldParam(SpatialWorldParam.ShadowModeParam);
+        
+        mergeForShadows.makeInput(enqueue, "Opaque", "Queues[0]");
+        mergeForShadows.makeInput(enqueue, "Sky", "Queues[1]");
+        mergeForShadows.makeInput(enqueue, "Transparent", "Queues[2]");
+        mergeForShadows.makeInput(enqueue, "Gui", "Queues[3]");
+        mergeForShadows.makeInput(enqueue, "Translucent", "Queues[4]");
+        
+        shadowQueue.makeInput(mergeForShadows, "Result", "Geometry");
+        lightShadows.makeInput(shadowQueue, "Occluders", "Occluders");
+        lightShadows2.makeInput(shadowQueue, "Occluders", "Occluders");
+        shadowCompose.makeInput(shadowQueue, "Receivers", "Receivers");
+        shadowCompose.makeGroupInputToList(lightShadows, "ShadowMaps", "ShadowMaps");
+        shadowCompose.makeGroupInputToList(lightShadows2, "ShadowMaps", "ShadowMaps");
+        lightImg.makeInput(shadowCompose, "LightShadowIndices", "LightShadowIndices");
+        deferred.makeInput(shadowCompose, "LightContribution", "LightContribution");
+        shadowDepthDebug.makeInput(lightShadows, "ShadowMaps[0]", Attribute.INPUT);
+        lightContrDebug.makeInput(shadowCompose, "LightContribution", Attribute.INPUT);
+        
+        shadowDepthDebug.setName("ShadowDepthDebug");
+        lightContrDebug.setName("LightContributionDebug");
+        lightShadows.setLightSource(new GraphSetting<>("PointLightShadowCaster", null));
+        lightShadows2.setLightSource(new GraphSetting<>("PointLightShadowCaster2", null));
+        
+        //shadowOut.makeInput(shadowCompose, "LightContribution", Attribute.INPUT);
+
         gbuf.makeInput(enqueue, "Opaque", "Geometry");
         
         gbufDebugTarget.setIndexSource(new GraphSetting("GBufferDebug", -1));
@@ -156,12 +166,6 @@ public class RenthylPlus {
         
         return fg;
         
-    }
-    
-    private static <T extends RenderModule> T add(T module, RenderContainer target1, RenderContainer target2, boolean val) {
-        if (val) target1.add(module);
-        else target2.add(module);
-        return module;
     }
     
     /**

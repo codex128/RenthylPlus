@@ -20,6 +20,9 @@ MaterialDef DeferredShading {
         Texture2D Tiles
         Texture2D LightIndex
         
+        // Shadows
+        Texture2D LightContributionMap
+        
     }
 
     Technique DeferredPass {

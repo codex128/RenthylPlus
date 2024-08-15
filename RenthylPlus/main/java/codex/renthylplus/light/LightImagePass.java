@@ -39,6 +39,7 @@ import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
 import com.jme3.export.OutputCapsule;
+import com.jme3.light.Light;
 import com.jme3.light.LightList;
 import com.jme3.light.LightProbe;
 import com.jme3.math.ColorRGBA;
@@ -49,6 +50,7 @@ import com.jme3.texture.Texture2D;
 import com.jme3.util.BufferUtils;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -78,6 +80,7 @@ public class LightImagePass extends RenderPass {
     private final LightImagePacker packer = new LightImagePacker();
     private ResourceTicket<LightList> lights;
     private ResourceTicket<TiledRenderGrid> tileInfo;
+    private ResourceTicket<HashMap<Light, Integer>> lightShadowIndices;
     private ResourceTicket<Texture2D>[] textures;
     private ResourceTicket<Texture2D>[] tileTextures;
     private ResourceTicket<Integer> numLights;
@@ -93,6 +96,7 @@ public class LightImagePass extends RenderPass {
     protected void initialize(FrameGraph frameGraph) {
         lights = addInput("Lights");
         tileInfo = addInput("TileInfo");
+        lightShadowIndices = addInput("LightShadowIndices");
         textures = addOutputGroup("Textures", 3);
         tileTextures = addOutputGroup("TileTextures", 2);
         numLights = addOutput("NumLights");
@@ -123,12 +127,13 @@ public class LightImagePass extends RenderPass {
         declare(null, ambientColor);
         declare(null, probes);
         reference(lights);
-        referenceOptional(tileInfo);
+        referenceOptional(tileInfo, lightShadowIndices);
     }
     @Override
     protected void execute(FGRenderContext context) {
         LightList lightList = resources.acquire(lights);
         TiledRenderGrid grid = resources.acquireOrElse(tileInfo, null);
+        HashMap<Light, Integer> indexMap = resources.acquireOrElse(lightShadowIndices, null);
         Camera cam = context.getViewPort().getCamera();
         Texture2D tiles = null;
         Texture2D indices = null;
@@ -150,7 +155,7 @@ public class LightImagePass extends RenderPass {
                            resources.acquire(textures[1]),
                            resources.acquire(textures[2]),
                            tiles, indices);
-        int n = packer.packLights(lightList, ambient, probeList, cam, grid);
+        int n = packer.packLights(lightList, ambient, probeList, cam, grid, indexMap);
         resources.setPrimitive(numLights, n);
         resources.setPrimitive(ambientColor, ambient);
         resources.setPrimitive(probes, probeList);

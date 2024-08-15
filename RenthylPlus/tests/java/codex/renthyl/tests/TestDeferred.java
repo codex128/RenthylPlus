@@ -34,14 +34,23 @@ import codex.renthyl.Renthyl;
 import codex.renthyl.client.MatParamTargetControl;
 import codex.renthyl.modules.Attribute;
 import codex.renthyl.modules.ModuleLocator;
+import codex.renthylplus.shadow.ShadowMapViewer;
+import com.jme3.environment.EnvironmentProbeControl;
 import com.jme3.font.BitmapText;
 import com.jme3.input.KeyInput;
 import com.jme3.input.controls.ActionListener;
 import com.jme3.input.controls.KeyTrigger;
+import com.jme3.light.SpotLight;
+import com.jme3.material.Material;
+import com.jme3.math.ColorRGBA;
+import com.jme3.math.FastMath;
+import com.jme3.math.Vector3f;
 import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Spatial;
+import com.jme3.scene.shape.RectangleMesh;
 import com.jme3.shader.VarType;
+import com.jme3.system.AppSettings;
 
 /**
  *
@@ -51,10 +60,14 @@ public class TestDeferred extends TestApplication implements ActionListener {
     
     private FrameGraph fg;
     private BitmapText hud;
+    private SpotLight spot;
+    private boolean moveLight = true;
     
     public static void main(String[] args){
         TestDeferred app = new TestDeferred();
-        app.applySettings();
+        AppSettings settings = app.applySettings();
+        settings.setFrameRate(-1);
+        settings.setVSync(false);
         app.start();
     }
     
@@ -65,27 +78,82 @@ public class TestDeferred extends TestApplication implements ActionListener {
         
         fg = RenthylPlus.deferred(assetManager);
         viewPort.setPipeline(fg);
+        rootNode.attachChild(fg.getDebugNode());
         
-        setupAll();
+        Spatial tank2 = loadTank();
+        tank2.setShadowMode(RenderQueue.ShadowMode.CastAndReceive);
+        //setupCam(tank2);
+        flyCam.setMoveSpeed(30);
+        flyCam.setDragToRotate(true);
+        //setupLight();
+        rootNode.addControl(new EnvironmentProbeControl(assetManager, 256));
+        loadSky();
         hud = loadText("", 5, windowSize.y-5, -1);
         reloadHud();
         
         Spatial tank = loadTank();
         tank.setLocalTranslation(20, 0, 0);
         tank.setQueueBucket(RenderQueue.Bucket.Transparent);
+        tank.setShadowMode(RenderQueue.ShadowMode.CastAndReceive);
+        
+        float floorSize = 100;
+        RectangleMesh floorMesh = new RectangleMesh(new Vector3f(-floorSize, 0, -floorSize),
+                new Vector3f(floorSize, 0, -floorSize), new Vector3f(-floorSize, 0, floorSize));
+        floorMesh.flip();
+        Geometry floor = new Geometry("floor", floorMesh);
+        floor.setLocalTranslation(0, -5, 0);
+        Material floorMat = new Material(assetManager, "Common/MatDefs/Light/PBRLighting.j3md");
+        floorMat.setColor("BaseColor", ColorRGBA.Green);
+        floorMat.setFloat("Metallic", .5f);
+        floorMat.setFloat("Roughness", .5f);
+        floor.setMaterial(floorMat);
+        floor.setShadowMode(RenderQueue.ShadowMode.CastAndReceive);
+        rootNode.attachChild(floor);
+        
+        spot = new SpotLight();
+        spot.setPosition(new Vector3f(10, 2, -10));
+        spot.setDirection(new Vector3f(-1, -1, 1));
+        spot.setSpotOuterAngle(FastMath.PI*0.3f);
+        spot.setSpotInnerAngle(FastMath.PI*0.2f);
+        spot.setSpotRange(500);
+        rootNode.addLight(spot);
+        fg.setSetting("PointLightShadowCaster", spot);
+        
+        SpotLight spot2 = new SpotLight();
+        spot2.setPosition(new Vector3f(10, 2, -10));
+        spot2.setDirection(new Vector3f(-1, -1, 1));
+        spot2.setSpotOuterAngle(FastMath.PI*0.3f);
+        spot2.setSpotInnerAngle(FastMath.PI*0.2f);
+        spot2.setSpotRange(500);
+        rootNode.addLight(spot2);
+        fg.setSetting("PointLightShadowCaster2", spot2);
+        
+        //rootNode.addLight(new AmbientLight(ColorRGBA.White.mult(0.05f)));
         
         int viewerSize = 200;
-        Geometry viewer = loadTextureViewer(windowSize.x-viewerSize, 0, viewerSize, viewerSize);
-        MatParamTargetControl viewerTarget = new MatParamTargetControl("ColorMap", VarType.Texture2D);
-        fg.get(ModuleLocator.by(Attribute.class, "GBufferDebug")).addTarget(viewerTarget);
-        viewer.addControl(viewerTarget);
+        Geometry viewer1 = loadTextureViewer(windowSize.x-viewerSize, 0, viewerSize, viewerSize);
+        MatParamTargetControl viewerTarget1 = new MatParamTargetControl("ColorMap", VarType.Texture2D);
+        fg.get(ModuleLocator.by(Attribute.class, "GBufferDebug")).addTarget(viewerTarget1);
+        viewer1.addControl(viewerTarget1);
         
+        Geometry viewer2 = loadTextureViewer(windowSize.x-viewerSize, viewerSize, viewerSize, viewerSize);
+        ShadowMapViewer viewerTarget2 = new ShadowMapViewer("ColorMap", VarType.Texture2D);
+        fg.get(ModuleLocator.by(Attribute.class, "ShadowDepthDebug")).addTarget(viewerTarget2);
+        viewer2.addControl(viewerTarget2);
+        
+        Geometry viewer3 = loadTextureViewer(windowSize.x-viewerSize, viewerSize*2, viewerSize, viewerSize);
+        MatParamTargetControl viewerTarget3 = new MatParamTargetControl("ColorMap", VarType.Texture2D);
+        fg.get(ModuleLocator.by(Attribute.class, "LightContributionDebug")).addTarget(viewerTarget3);
+        viewer3.addControl(viewerTarget3);
+        
+        fg.enableFeature("UseLightTextures", true);
         fg.setSetting("GBufferDebug", 0);
         
         inputManager.addMapping("UseLightTextures", new KeyTrigger(KeyInput.KEY_1));
         inputManager.addMapping("UseLightTiling", new KeyTrigger(KeyInput.KEY_2));
         inputManager.addMapping("gbufUp", new KeyTrigger(KeyInput.KEY_3));
-        inputManager.addListener(this, "UseLightTextures", "UseLightTiling", "gbufUp");
+        inputManager.addMapping("GrabLight", new KeyTrigger(KeyInput.KEY_RETURN));
+        inputManager.addListener(this, "UseLightTextures", "UseLightTiling", "gbufUp", "GrabLight");
         
     }
     @Override
@@ -99,6 +167,15 @@ public class TestDeferred extends TestApplication implements ActionListener {
         } else if (name.equals("gbufUp") && isPressed) {
             int n = fg.getSetting("GBufferDebug");
             fg.setSetting("GBufferDebug", wrap(n+1, 0, 4));
+        } else if (name.equals("GrabLight") && isPressed) {
+            moveLight = !moveLight;
+        }
+    }
+    @Override
+    public void simpleUpdate(float tpf) {
+        if (moveLight) {
+            spot.setPosition(cam.getLocation());
+            spot.setDirection(cam.getDirection());
         }
     }
     

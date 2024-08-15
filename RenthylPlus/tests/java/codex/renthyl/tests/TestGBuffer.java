@@ -35,6 +35,12 @@ import codex.renthylplus.deferred.GBufferPass;
 import com.jme3.input.KeyInput;
 import com.jme3.input.controls.ActionListener;
 import com.jme3.input.controls.KeyTrigger;
+import com.jme3.material.Material;
+import com.jme3.math.ColorRGBA;
+import com.jme3.math.Vector3f;
+import com.jme3.renderer.queue.RenderQueue;
+import com.jme3.scene.Geometry;
+import com.jme3.scene.shape.RectangleMesh;
 
 /**
  *
@@ -58,7 +64,26 @@ public class TestGBuffer extends TestApplication {
         
         GBufferPass.adaptAllMaterials(assetManager);
         
+        
+        
         setupAll();
+        
+        
+        float floorSize = 100;
+        RectangleMesh floorMesh = new RectangleMesh(new Vector3f(-floorSize, 0, -floorSize),
+                new Vector3f(floorSize, 0, -floorSize), new Vector3f(-floorSize, 0, floorSize));
+        floorMesh.flip();
+        Geometry floor = new Geometry("floor", floorMesh);
+        floor.setLocalTranslation(0, -5, 0);
+        Material floorMat = new Material(assetManager, "Common/MatDefs/Light/PBRLighting.j3md");
+        floorMat.setColor("BaseColor", ColorRGBA.Green);
+        floorMat.setFloat("Metallic", .5f);
+        floorMat.setFloat("Roughness", .5f);
+        //floorMat.setFloat("EmissiveIntensity", 2.0f);
+        //floorMat.setTexture("LightMap", assetManager.loadTexture("Models/Tank/Tank_Occ_Rough_Metal.png"));
+        floor.setMaterial(floorMat);
+        floor.setShadowMode(RenderQueue.ShadowMode.Cast);
+        rootNode.attachChild(floor);
         
         ActionListener action = (String name, boolean isPressed, float tpf) -> {
             if (isPressed) {
