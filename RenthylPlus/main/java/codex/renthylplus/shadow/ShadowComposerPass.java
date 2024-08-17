@@ -13,6 +13,7 @@ import codex.renthyl.resources.ResourceTicket;
 import com.jme3.light.Light;
 import com.jme3.material.Material;
 import com.jme3.material.RenderState;
+import com.jme3.math.Vector2f;
 import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Image;
 import com.jme3.texture.Texture;
@@ -36,6 +37,7 @@ public class ShadowComposerPass extends RenderPass {
     private final RenderState renderState = new RenderState();
     private final HashMap<Light, Integer> indexMap = new HashMap<>();
     private Material material;
+    private final Vector2f tempInvRange = new Vector2f();
     
     @Override
     protected void initialize(FrameGraph frameGraph) {
@@ -91,24 +93,21 @@ public class ShadowComposerPass extends RenderPass {
         int nextIndex = 0;
         
         ShadowMap[] maps = acquireArrayOrElse("ShadowMaps", n -> new ShadowMap[n], null);
-        System.out.println("set to render "+maps.length+" shadow maps from "+getGroupArray("ShadowMaps").length+" tickets");
         for (ShadowMap m : maps) {
             if (m == null) {
                 continue;
             }
-            System.out.println("  render shadow map");
             Integer i = indexMap.get(m.getLight());
             if (i == null && nextIndex < MAX_SHADOW_LIGHTS) {
                 i = nextIndex++;
                 indexMap.put(m.getLight(), i);
             }
             if (i != null) {
-                System.out.println("    shadow map has a shadow index assigned.");
                 material.setTexture("ShadowMap", m.getMap());
                 material.setMatrix4("LightViewProjectionMatrix", m.getProjection());
                 material.setInt("LightType", m.getLight().getType().getId());
                 material.setInt("LightIndex", i);
-                material.setVector2("LightRange", m.getRange());
+                material.setVector2("LightRangeInverse", inverse(m.getRange(), tempInvRange));
                 context.renderFullscreen(material);
                 renderState.setBlendMode(RenderState.BlendMode.Additive);
             }
@@ -124,5 +123,14 @@ public class ShadowComposerPass extends RenderPass {
     }
     @Override
     protected void cleanup(FrameGraph frameGraph) {}
+    
+    private static Vector2f inverse(Vector2f vec, Vector2f store) {
+        if (store == null) {
+            store = new Vector2f();
+        }
+        store.x = 1f / vec.x;
+        store.y = 1f / vec.y;
+        return store;
+    }
     
 }

@@ -49,6 +49,7 @@ import com.jme3.material.Material;
 import com.jme3.material.TechniqueDef;
 import com.jme3.material.logic.TechniqueDefLogic;
 import com.jme3.math.ColorRGBA;
+import com.jme3.math.Vector2f;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.Caps;
 import com.jme3.renderer.RenderManager;
@@ -192,6 +193,7 @@ public class DeferredPass extends RenderPass implements TechniqueDefLogic {
         acquireArrayOrElse("LightTextures", lightTextures, null);
         lightContributionMap = resources.acquireOrElse(lightContribution, null);
         material.setTexture("LightContributionMap", lightContributionMap);
+        material.setVector2("PixelSize", new Vector2f(1f/context.getWidth(), 1f/context.getHeight()));
         if (lightTextures[0] == null) {
             context.getScreen().render(context.getRenderManager(), material, resources.acquire(lights));
         } else {

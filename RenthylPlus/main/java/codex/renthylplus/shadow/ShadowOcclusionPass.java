@@ -90,9 +90,6 @@ public abstract class ShadowOcclusionPass <T extends Light> extends RenderPass {
             // get the framebuffer now, so it won't be culled
             FrameBuffer fb = getFrameBuffer(i, w, h, 1);
             if (containsAll || frustumIntersect(viewCam, shadowCam)) {
-                shadowCam.resize(w, h, true, true);
-                shadowCam.update();
-                shadowCam.updateViewProjection();
                 ShadowMap map = resources.acquire(mapTickets[i]);
                 map.setLight(l);
                 map.setProjection(shadowCam.getViewProjectionMatrix());
@@ -105,17 +102,7 @@ public abstract class ShadowOcclusionPass <T extends Light> extends RenderPass {
                 renderer.setFrameBuffer(fb);
                 renderer.clearBuffers(true, true, true);
                 rm.setCamera(shadowCam, false);
-                System.out.println("rendering "+occluderQueue.getNumGeometries()+" geometries for shadows");
-                System.out.println("  framebuffer: "+fb.getWidth()+", "+fb.getHeight());
-                System.out.println("  texture: "+map.getMap().getImage().getWidth()+", "+map.getMap().getImage().getHeight());
-                System.out.println("  camera: "+shadowCam.getWidth()+", "+shadowCam.getHeight());
-                System.out.println("  current camera is shadow cam: "+(rm.getCurrentCamera() == shadowCam));
-                System.out.println("  rendered shadow range: "+map.getRange());
-                context.renderGeometry(occluderQueue, shadowCam, (RenderManager rm1, Geometry geom) -> {
-                    System.out.println("    rendered shadow occlusion geometry.");
-                    rm1.renderGeometry(geom);
-                    return true;
-                });
+                context.renderGeometry(occluderQueue, shadowCam, null);
             } else {
                 resources.setUndefined(mapTickets[i]);
             }

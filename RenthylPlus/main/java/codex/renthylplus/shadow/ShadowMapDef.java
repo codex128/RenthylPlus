@@ -21,6 +21,8 @@ public class ShadowMapDef extends AbstractResourceDef<ShadowMap> {
     public ShadowMapDef() {
         mapDef.setFormat(Image.Format.Depth);
         mapDef.setShadowCompare(Texture.ShadowCompareMode.LessOrEqual);
+        //mapDef.setMagFilter(Texture.MagFilter.Nearest);
+        //mapDef.setMinFilter(Texture.MinFilter.NearestNoMipMaps);
     }
     
     @Override

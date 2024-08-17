@@ -1,0 +1,14 @@
+
+bool sampleContribution(int shadowIndex, sampler2D contribution, vec2 uv) {
+    int table = int(texture2D(contribution, uv).r);
+    return ((table >> shadowIndex) & 1) == 1;
+}
+
+bool isExposed(int shadowIndex, sampler2D contribution, vec2 uv, vec2 pixel) {
+    if (shadowIndex > 0) {
+        shadowIndex--;
+        return sampleContribution(shadowIndex, contribution, uv);
+    }
+    return false;
+}
+

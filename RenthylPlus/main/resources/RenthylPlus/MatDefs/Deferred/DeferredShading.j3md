@@ -22,6 +22,7 @@ MaterialDef DeferredShading {
         
         // Shadows
         Texture2D LightContributionMap
+        Vector2 PixelSize
         
     }
 

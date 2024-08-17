@@ -40,6 +40,8 @@ import com.jme3.font.BitmapText;
 import com.jme3.input.KeyInput;
 import com.jme3.input.controls.ActionListener;
 import com.jme3.input.controls.KeyTrigger;
+import com.jme3.light.AmbientLight;
+import com.jme3.light.PointLight;
 import com.jme3.light.SpotLight;
 import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
@@ -61,6 +63,7 @@ public class TestDeferred extends TestApplication implements ActionListener {
     private FrameGraph fg;
     private BitmapText hud;
     private SpotLight spot;
+    private PointLight point;
     private boolean moveLight = true;
     
     public static void main(String[] args){
@@ -87,13 +90,14 @@ public class TestDeferred extends TestApplication implements ActionListener {
         flyCam.setDragToRotate(true);
         //setupLight();
         rootNode.addControl(new EnvironmentProbeControl(assetManager, 256));
+        rootNode.addLight(new AmbientLight(ColorRGBA.White.mult(.01f)));
         loadSky();
         hud = loadText("", 5, windowSize.y-5, -1);
         reloadHud();
         
         Spatial tank = loadTank();
         tank.setLocalTranslation(20, 0, 0);
-        tank.setQueueBucket(RenderQueue.Bucket.Transparent);
+        //tank.setQueueBucket(RenderQueue.Bucket.Transparent);
         tank.setShadowMode(RenderQueue.ShadowMode.CastAndReceive);
         
         float floorSize = 100;
@@ -111,7 +115,7 @@ public class TestDeferred extends TestApplication implements ActionListener {
         rootNode.attachChild(floor);
         
         spot = new SpotLight();
-        spot.setPosition(new Vector3f(10, 2, -10));
+        spot.setPosition(new Vector3f(10, 10, -10));
         spot.setDirection(new Vector3f(-1, -1, 1));
         spot.setSpotOuterAngle(FastMath.PI*0.3f);
         spot.setSpotInnerAngle(FastMath.PI*0.2f);
@@ -119,14 +123,11 @@ public class TestDeferred extends TestApplication implements ActionListener {
         rootNode.addLight(spot);
         fg.setSetting("PointLightShadowCaster", spot);
         
-        SpotLight spot2 = new SpotLight();
-        spot2.setPosition(new Vector3f(10, 2, -10));
-        spot2.setDirection(new Vector3f(-1, -1, 1));
-        spot2.setSpotOuterAngle(FastMath.PI*0.3f);
-        spot2.setSpotInnerAngle(FastMath.PI*0.2f);
-        spot2.setSpotRange(500);
-        rootNode.addLight(spot2);
-        fg.setSetting("PointLightShadowCaster2", spot2);
+        point = new PointLight();
+        point.setPosition(new Vector3f(10, 10, -10));
+        point.setRadius(5000);
+        rootNode.addLight(point);
+        fg.setSetting("PointLightShadowCaster2", point);
         
         //rootNode.addLight(new AmbientLight(ColorRGBA.White.mult(0.05f)));
         
@@ -174,8 +175,9 @@ public class TestDeferred extends TestApplication implements ActionListener {
     @Override
     public void simpleUpdate(float tpf) {
         if (moveLight) {
-            spot.setPosition(cam.getLocation());
-            spot.setDirection(cam.getDirection());
+            //spot.setPosition(cam.getLocation());
+            //spot.setDirection(cam.getDirection());
+            point.setPosition(cam.getLocation());
         }
     }
     

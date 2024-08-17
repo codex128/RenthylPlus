@@ -42,6 +42,7 @@ import codex.renthyl.client.GraphSetting;
 import codex.renthyl.light.TiledRenderGrid;
 import codex.renthyl.modules.RenderThread;
 import codex.renthyl.util.SpatialWorldParam;
+import codex.renthylplus.shadow.PointShadowPass;
 import codex.renthylplus.shadow.ShadowComposerPass;
 import codex.renthylplus.shadow.ShadowQueuePass;
 import codex.renthylplus.shadow.SpotShadowPass;
@@ -74,7 +75,7 @@ public class RenthylPlus {
         QueueMergePass mergeForShadows = fg.add(new QueueMergePass(5));
         ShadowQueuePass shadowQueue = fg.add(new ShadowQueuePass());
         SpotShadowPass lightShadows = fg.add(new SpotShadowPass(1024));
-        SpotShadowPass lightShadows2 = fg.add(new SpotShadowPass(1024));
+        PointShadowPass lightShadows2 = fg.add(new PointShadowPass(1024));
         ShadowComposerPass shadowCompose = fg.add(new ShadowComposerPass());
         Attribute shadowDepthDebug = fg.add(new Attribute());
         Attribute lightContrDebug = fg.add(new Attribute());
@@ -108,7 +109,7 @@ public class RenthylPlus {
         shadowCompose.makeGroupInputToList(lightShadows2, "ShadowMaps", "ShadowMaps");
         lightImg.makeInput(shadowCompose, "LightShadowIndices", "LightShadowIndices");
         deferred.makeInput(shadowCompose, "LightContribution", "LightContribution");
-        shadowDepthDebug.makeInput(lightShadows, "ShadowMaps[0]", Attribute.INPUT);
+        shadowDepthDebug.makeInput(lightShadows2, "ShadowMaps[1]", Attribute.INPUT);
         lightContrDebug.makeInput(shadowCompose, "LightContribution", Attribute.INPUT);
         
         shadowDepthDebug.setName("ShadowDepthDebug");

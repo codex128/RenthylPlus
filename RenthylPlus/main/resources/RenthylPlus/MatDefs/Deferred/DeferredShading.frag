@@ -38,6 +38,8 @@ uniform int m_NBLights;
     #endif
     #ifdef SHADOWS
         uniform sampler2D m_LightContributionMap;
+        uniform vec2 m_PixelSize;
+        #import "RenthylPlus/ShaderLib/Shadows.glsllib"
     #endif
 #endif
 
@@ -235,20 +237,14 @@ void main(){
                     vec4 lightColor = g_LightData[i];
                     vec4 lightData1 = g_LightData[i+1];
                 #endif
-                
-                #ifdef SHADOWS
-                    int shadowIndex = int(lightColor.w) >> 2;
-                    if (shadowIndex > 0) {
-                        shadowIndex--;
-                        int table = int(texture2D(m_LightContributionMap, innerTexCoord).r);
-                        // if the bit at the index is zero, this light is casting
-                        // a shadow here
-                        if (((table >> shadowIndex) & 1) == 0) {
-                            continue;
-                        }
-                    }
-                #endif
                 int lightType = int(lightColor.w);
+                #ifdef SHADOWS
+                    int shadowIndex = lightType >> 2;
+                    if (!isExposed(shadowIndex, m_LightContributionMap, innerTexCoord, m_PixelSize)) {
+                        continue;
+                    }
+                    lightType = lightType & 3;
+                #endif
                 
                 vec4 lightDir;
                 vec3 lightVec;

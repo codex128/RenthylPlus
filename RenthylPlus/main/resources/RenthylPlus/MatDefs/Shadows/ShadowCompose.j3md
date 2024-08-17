@@ -8,7 +8,7 @@ MaterialDef ShadowCompose {
         Matrix4 LightViewProjectionMatrix
         Int LightIndex
         Int LightType
-        Vector2 LightRange
+        Vector2 LightRangeInverse
         
     }
     

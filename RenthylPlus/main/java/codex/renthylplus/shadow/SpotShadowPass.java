@@ -11,8 +11,6 @@ import com.jme3.light.SpotLight;
 import com.jme3.math.FastMath;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
-import com.jme3.scene.Geometry;
-import com.jme3.scene.debug.WireFrustum;
 
 /**
  *
@@ -24,8 +22,6 @@ public class SpotShadowPass extends ShadowOcclusionPass<SpotLight> {
     private final Vector3f direction = new Vector3f();
     private float range = -1;
     private float outerAngle = -1;
-    private WireFrustum debugMesh;
-    private Geometry debugGeom;
     
     public SpotShadowPass(int size) {
         super(Light.Type.Spot, 1, size);
@@ -48,8 +44,6 @@ public class SpotShadowPass extends ShadowOcclusionPass<SpotLight> {
             shadowCam.setLocation(light.getPosition());
             shadowCam.update();
             shadowCam.updateViewProjection();
-            debugGeom.setLocalTranslation(shadowCam.getLocation());
-            debugGeom.setLocalRotation(shadowCam.getRotation());
         }
         
         return shadowCam;
