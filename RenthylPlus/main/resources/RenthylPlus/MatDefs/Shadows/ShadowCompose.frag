@@ -1,7 +1,8 @@
 
 #import "Common/ShaderLib/GLSLCompat.glsllib"
 
-uniform float g_Time;
+#import "Common/ShaderLib/GLSLCompat.glsllib"
+#import "RenthylPlus/ShaderLib/Projection.glsllib"
 
 uniform sampler2D m_SceneDepthMap;
 uniform sampler2D m_ShadowMap;
@@ -12,15 +13,6 @@ uniform int m_LightType;
 uniform vec2 m_LightRangeInverse;
 
 varying vec2 texCoord;
-
-vec3 getPosition(in vec2 texCoord, in float depth, in mat4 matrixInverse){
-    vec4 pos = vec4(1.0);
-    pos.xy = (texCoord * vec2(2.0)) - vec2(1.0);
-    pos.z = depth * 2.0 - 1.0;
-    pos = matrixInverse * pos;
-    pos.xyz /= pos.w;
-    return pos.xyz;
-}
 
 void main() {
     

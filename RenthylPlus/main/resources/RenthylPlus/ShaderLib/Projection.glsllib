@@ -1,0 +1,14 @@
+
+vec3 getPosition(in vec2 texCoord, in float depth, in mat4 matrixInverse){
+    vec4 pos = vec4(1.0);
+    pos.xy = (texCoord * vec2(2.0)) - vec2(1.0);
+    pos.z = depth * 2.0 - 1.0;
+    pos = matrixInverse * pos;
+    pos.xyz /= pos.w;
+    return pos.xyz;
+}
+
+vec2 getProjectedTexCoord(in vec3 position, in mat4 viewProjMat) {
+    return ((viewProjMat * vec4(position, 1.0)).xy + 1.0) / 2.0;
+}
+
