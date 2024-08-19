@@ -28,12 +28,12 @@
  */
 package codex.renthylplus.deferred;
 
+import codex.boost.material.MaterialAdapter;
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.GeometryQueue;
 import codex.renthyl.resources.ResourceTicket;
 import codex.renthyl.definitions.TextureDef;
-import codex.renthyl.material.MaterialAdapter;
 import codex.renthyl.modules.RenderPass;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
@@ -45,6 +45,7 @@ import com.jme3.texture.Texture2D;
 import java.util.function.Function;
 import com.jme3.renderer.GeometryRenderHandler;
 import com.jme3.renderer.RenderManager;
+import com.jme3.renderer.queue.NullComparator;
 
 /**
  * Renders information about a queue of geometries to a set of textures.
@@ -68,27 +69,27 @@ public class GBufferPass extends RenderPass implements GeometryRenderHandler {
     private static final MaterialAdapter adapter = new MaterialAdapter();
     
     static {
-        adapter.add("Common/MatDefs/Light/PBRLighting.j3md", "RenthylPlus/MatDefs/GBuffer/PBRLighting.fgmt");
-        adapter.add("Common/MatDefs/Light/Lighting.j3md", "RenthylPlus/MatDefs/GBuffer/Lighting.fgmt");
-        adapter.add("Common/MatDefs/Misc/Unshaded.j3md", "RenthylPlus/MatDefs/GBuffer/Unshaded.fgmt");
-        adapter.add("Common/MatDefs/Terrain/Terrain.j3md", "RenthylPlus/MatDefs/GBuffer/Terrain.fgmt");
-        adapter.add("Common/MatDefs/Terrain/PBRTerrain.j3md", "RenthylPlus/MatDefs/GBuffer/PBRTerrain.fgmt");
-        adapter.add("Common/MatDefs/Terrain/AdvancedPBRTerrain.j3md", "RenthylPlus/MatDefs/GBuffer/AdvancedPBRTerrain.fgmt");
-        adapter.add("Common/MatDefs/Terrain/TerrainLighting.j3md", "RenthylPlus/MatDefs/GBuffer/TerrainLighting.fgmt");
+        adapter.add("Common/MatDefs/Light/PBRLighting.j3md", "RenthylPlus/MatDefs/GBuffer/PBRLighting.j3md");
+        adapter.add("Common/MatDefs/Light/Lighting.j3md", "RenthylPlus/MatDefs/GBuffer/Lighting.j3md");
+        adapter.add("Common/MatDefs/Misc/Unshaded.j3md", "RenthylPlus/MatDefs/GBuffer/Unshaded.j3md");
+        adapter.add("Common/MatDefs/Terrain/Terrain.j3md", "RenthylPlus/MatDefs/GBuffer/Terrain.j3md");
+        adapter.add("Common/MatDefs/Terrain/PBRTerrain.j3md", "RenthylPlus/MatDefs/GBuffer/PBRTerrain.j3md");
+        adapter.add("Common/MatDefs/Terrain/AdvancedPBRTerrain.j3md", "RenthylPlus/MatDefs/GBuffer/AdvancedPBRTerrain.j3md");
+        adapter.add("Common/MatDefs/Terrain/TerrainLighting.j3md", "RenthylPlus/MatDefs/GBuffer/TerrainLighting.j3md");
     }
     
     private AssetManager assetManager;
     private ResourceTicket<GeometryQueue> geometry;
     private ResourceTicket<Texture2D>[] gbuffers;
-    private ResourceTicket<Integer> numRendersTicket;
+    private ResourceTicket<GeometryQueue> skipped;
     private final TextureDef<Texture2D>[] texDefs = new TextureDef[5];
-    private int numRenders = 0;
+    private final GeometryQueue skipQueue = new GeometryQueue(new NullComparator());
     
     @Override
     protected void initialize(FrameGraph frameGraph) {
         geometry = addInput("Geometry");
         gbuffers = addOutputGroup("GBufferData", 5);
-        numRendersTicket = addOutput("NumRenders");
+        skipped = addOutput("SkippedGeometry");
         Function<Image, Texture2D> tex = img -> new Texture2D(img);
         texDefs[0] = new TextureDef<>(Texture2D.class, tex, Image.Format.RGBA16F);
         texDefs[1] = new TextureDef<>(Texture2D.class, tex, Image.Format.RGBA16F);
@@ -104,10 +105,9 @@ public class GBufferPass extends RenderPass implements GeometryRenderHandler {
             texDefs[i].setSize(w, h);
             declare(texDefs[i], gbuffers[i]);
         }
-        declare(null, numRendersTicket);
+        declare(null, skipped);
         reserve(gbuffers);
         reference(geometry);
-        numRenders = 0;
     }
     @Override
     protected void execute(FGRenderContext context) {
@@ -120,21 +120,23 @@ public class GBufferPass extends RenderPass implements GeometryRenderHandler {
         context.getRenderer().setBackgroundColor(ColorRGBA.BlackNoAlpha);
         GeometryQueue queue = resources.acquire(geometry);
         context.renderGeometry(queue, null, this);
-        resources.setPrimitive(numRendersTicket, numRenders);
+        resources.setPrimitive(skipped, skipQueue);
     }
     @Override
-    protected void reset(FGRenderContext context) {}
+    protected void reset(FGRenderContext context) {
+        skipQueue.clear();
+    }
     @Override
     protected void cleanup(FrameGraph frameGraph) {}
     @Override
     public boolean renderGeometry(RenderManager rm, Geometry geom) {
         Material material = geom.getMaterial();
         if (!adapter.adaptMaterial(assetManager, material, GBUFFER_PASS)) {
+            skipQueue.add(geom);
             return false;
         }
         material.selectTechnique(GBUFFER_PASS, rm);
         rm.renderGeometry(geom);
-        numRenders++;
         return true;
     }
     

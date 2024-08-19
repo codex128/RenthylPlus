@@ -1,0 +1,20 @@
+MaterialDef DepthDebug {
+
+    MaterialParameters {
+
+        Texture2D DepthMap
+        
+    }
+
+    Technique {
+
+        VertexShader GLSL310 GLSL300 GLSL100 GLSL150   : RenthylPlus/MatDefs/Simple.vert
+        FragmentShader GLSL310 GLSL300 GLSL100 GLSL150 : RenthylPlus/MatDefs/Debug/Depth.frag
+        
+        WorldParameters {
+            WorldViewProjectionMatrix
+        }
+        
+    }
+
+}

@@ -121,7 +121,7 @@ public class TestDeferred extends TestApplication implements ActionListener {
         spot.setSpotInnerAngle(FastMath.PI*0.2f);
         spot.setSpotRange(500);
         rootNode.addLight(spot);
-        fg.setSetting("PointLightShadowCaster", spot);
+        //fg.setSetting("PointLightShadowCaster", spot);
         
         point = new PointLight();
         point.setPosition(new Vector3f(10, 10, -10));
@@ -137,8 +137,8 @@ public class TestDeferred extends TestApplication implements ActionListener {
         fg.get(ModuleLocator.by(Attribute.class, "GBufferDebug")).addTarget(viewerTarget1);
         viewer1.addControl(viewerTarget1);
         
-        Geometry viewer2 = loadTextureViewer(windowSize.x-viewerSize, viewerSize, viewerSize, viewerSize);
-        ShadowMapViewer viewerTarget2 = new ShadowMapViewer("ColorMap", VarType.Texture2D);
+        Geometry viewer2 = loadDepthViewer(windowSize.x-viewerSize, viewerSize, viewerSize, viewerSize);
+        ShadowMapViewer viewerTarget2 = new ShadowMapViewer("DepthMap", VarType.Texture2D);
         fg.get(ModuleLocator.by(Attribute.class, "ShadowDepthDebug")).addTarget(viewerTarget2);
         viewer2.addControl(viewerTarget2);
         
