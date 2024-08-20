@@ -1,5 +1,39 @@
 MaterialDef PBRLighting {
-
+    
+    MaterialParameters {
+        
+        // It is important to include all parameters that are mapped to
+        // defines, with the correct types.
+        
+        Texture2D BaseColorMap
+        Texture2D NormalMap
+        Texture2D MetallicMap
+        Texture2D RoughnessMap
+        Texture2D EmissiveMap
+        Color Emissive
+        Boolean UseSpecGloss
+        Texture2D ParallaxMap
+        Boolean PackedNormalParallax
+        Boolean SteepParallax
+        Texture2D LightMap
+        Boolean SeparateTexCoord
+        Float AlphaDiscardThreshold
+        Int NumberOfBones
+        Boolean UseInstancing
+        Texture2D MetallicRoughnessMap
+        Texture2D SpecularGlossinessMap
+        Texture2D SpecularMap
+        Texture2D GlossinessMap
+        Float NormalType
+        Boolean UseVertexColor
+        Boolean LightMapAsAOMap
+        Boolean AoPackedInMRMap
+        Int NumberOfMorphTargets
+        Int NumberOfTargetsBuffers
+        Boolean HorizonFade
+        
+    }
+    
     Technique GBufferPass {
         
         VertexShader GLSL310 GLSL300 GLSL100 GLSL150   : RenthylPlus/MatDefs/GBuffer/PBRLighting.vert

@@ -85,11 +85,8 @@ public abstract class ShadowOcclusionPass <T extends Light> extends RenderPass {
         rm.setForcedMaterial(material);
         int w = shadowMapDef.getMapDef().getWidth();
         int h = shadowMapDef.getMapDef().getHeight();
-        System.out.println("rendering shadow map");
         for (int i = 0; i < numShadowMaps; i++) {
             Camera shadowCam = getShadowCamera(context, occluderQueue, l, i);
-            System.out.println("  camera position: "+shadowCam.getLocation());
-            System.out.println("  camera direction: "+shadowCam.getDirection());
             // get the framebuffer now, so it won't be culled
             FrameBuffer fb = getFrameBuffer(i, w, h, 1);
             if (containsAll || frustumIntersect(viewCam, shadowCam)) {
@@ -105,7 +102,6 @@ public abstract class ShadowOcclusionPass <T extends Light> extends RenderPass {
                 renderer.setFrameBuffer(fb);
                 renderer.clearBuffers(true, true, true);
                 rm.setCamera(shadowCam, false);
-                System.out.println("  rendering "+occluderQueue.getNumGeometries()+" light occluding geometries.");
                 context.renderGeometry(occluderQueue, shadowCam, null);
             } else {
                 resources.setUndefined(mapTickets[i]);

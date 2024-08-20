@@ -77,7 +77,6 @@ public class ShadowComposerPass extends RenderPass {
         context.getRenderer().setFrameBuffer(sceneDepthFb);
         context.getRenderer().clearBuffers(true, true, true);
         GeometryQueue rec = resources.acquire(receivers);
-        System.out.println("rendering "+rec.getNumGeometries()+" shadow receiving geometries");
         context.renderGeometry(rec, null, null);
         
         // setup render parameters
