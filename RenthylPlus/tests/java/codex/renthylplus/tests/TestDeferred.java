@@ -26,7 +26,7 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package codex.renthyl.tests;
+package codex.renthylplus.tests;
 
 import codex.renthyl.FrameGraph;
 import codex.renthylplus.RenthylPlus;
@@ -71,6 +71,7 @@ public class TestDeferred extends TestApplication implements ActionListener {
         AppSettings settings = app.applySettings();
         settings.setFrameRate(-1);
         settings.setVSync(false);
+        //settings.setGraphicsTrace(true);
         app.start();
     }
     
@@ -121,7 +122,7 @@ public class TestDeferred extends TestApplication implements ActionListener {
         spot.setSpotInnerAngle(FastMath.PI*0.2f);
         spot.setSpotRange(500);
         rootNode.addLight(spot);
-        //fg.setSetting("PointLightShadowCaster", spot);
+        fg.setSetting("PointLightShadowCaster", spot);
         
         point = new PointLight();
         point.setPosition(new Vector3f(10, 10, -10));
@@ -136,16 +137,19 @@ public class TestDeferred extends TestApplication implements ActionListener {
         MatParamTargetControl viewerTarget1 = new MatParamTargetControl("ColorMap", VarType.Texture2D);
         fg.get(ModuleLocator.by(Attribute.class, "GBufferDebug")).addTarget(viewerTarget1);
         viewer1.addControl(viewerTarget1);
+        viewer1.setCullHint(Spatial.CullHint.Always);
         
         Geometry viewer2 = loadDepthViewer(windowSize.x-viewerSize, viewerSize, viewerSize, viewerSize);
         ShadowMapViewer viewerTarget2 = new ShadowMapViewer("DepthMap", VarType.Texture2D);
         fg.get(ModuleLocator.by(Attribute.class, "ShadowDepthDebug")).addTarget(viewerTarget2);
         viewer2.addControl(viewerTarget2);
+        viewer2.setCullHint(Spatial.CullHint.Always);
         
-        Geometry viewer3 = loadTextureViewer(windowSize.x-viewerSize, viewerSize*2, viewerSize, viewerSize);
+        Geometry viewer3 = loadTextureViewer(0, 0, windowSize.x, windowSize.y);
         MatParamTargetControl viewerTarget3 = new MatParamTargetControl("ColorMap", VarType.Texture2D);
         fg.get(ModuleLocator.by(Attribute.class, "LightContributionDebug")).addTarget(viewerTarget3);
         viewer3.addControl(viewerTarget3);
+        viewer3.setCullHint(Spatial.CullHint.Always);
         
         fg.enableFeature("UseLightTextures", true);
         fg.setSetting("GBufferDebug", 0);

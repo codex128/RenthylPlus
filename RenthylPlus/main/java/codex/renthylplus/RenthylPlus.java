@@ -109,7 +109,7 @@ public class RenthylPlus {
         shadowCompose.makeGroupInputToList(lightShadows2, "ShadowMaps", "ShadowMaps");
         lightImg.makeInput(shadowCompose, "LightShadowIndices", "LightShadowIndices");
         deferred.makeInput(shadowCompose, "LightContribution", "LightContribution");
-        shadowDepthDebug.makeInput(lightShadows2, "ShadowMaps[2]", Attribute.INPUT);
+        shadowDepthDebug.makeInput(lightShadows2, "ShadowMaps[0]", Attribute.INPUT);
         lightContrDebug.makeInput(shadowCompose, "LightContribution", Attribute.INPUT);
         
         shadowDepthDebug.setName("ShadowDepthDebug");

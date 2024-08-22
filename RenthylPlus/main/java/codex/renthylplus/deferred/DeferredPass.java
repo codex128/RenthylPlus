@@ -47,6 +47,7 @@ import com.jme3.light.PointLight;
 import com.jme3.light.SpotLight;
 import com.jme3.material.Material;
 import com.jme3.material.TechniqueDef;
+import com.jme3.material.logic.DefaultTechniqueDefLogic;
 import com.jme3.material.logic.TechniqueDefLogic;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector2f;
@@ -258,7 +259,7 @@ public class DeferredPass extends RenderPass implements TechniqueDefLogic {
             injectLightTextures(shader);
         }
         renderer.setShader(shader);
-        TechniqueDefLogic.renderMeshFromGeometry(renderer, geometry);
+        FGRenderContext.renderMeshFromGeometry(renderer, geometry);
         probeList = null;
     }
     @Override

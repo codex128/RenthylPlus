@@ -2,7 +2,7 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
-package codex.renthyl.tests;
+package codex.renthylplus.tests;
 
 import codex.renthyl.FrameGraph;
 import codex.renthyl.Renthyl;

@@ -13,10 +13,11 @@ import codex.renthyl.resources.ResourceTicket;
 import com.jme3.light.Light;
 import com.jme3.material.Material;
 import com.jme3.material.RenderState;
+import com.jme3.math.Plane;
+import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
 import com.jme3.renderer.RenderManager;
 import com.jme3.renderer.Renderer;
-import com.jme3.scene.Geometry;
 import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Texture;
 import com.jme3.util.TempVars;
@@ -90,6 +91,7 @@ public abstract class ShadowOcclusionPass <T extends Light> extends RenderPass {
             // get the framebuffer now, so it won't be culled
             FrameBuffer fb = getFrameBuffer(i, w, h, 1);
             if (containsAll || frustumIntersect(viewCam, shadowCam)) {
+                rm.setCamera(shadowCam, false);
                 ShadowMap map = resources.acquire(mapTickets[i]);
                 map.setLight(l);
                 map.setProjection(shadowCam.getViewProjectionMatrix());
@@ -100,8 +102,7 @@ public abstract class ShadowOcclusionPass <T extends Light> extends RenderPass {
                     fb.setUpdateNeeded();
                 }
                 renderer.setFrameBuffer(fb);
-                renderer.clearBuffers(true, true, true);
-                rm.setCamera(shadowCam, false);
+                renderer.clearBuffers(false, true, false);
                 context.renderGeometry(occluderQueue, shadowCam, null);
             } else {
                 resources.setUndefined(mapTickets[i]);
@@ -132,6 +133,15 @@ public abstract class ShadowOcclusionPass <T extends Light> extends RenderPass {
     }
     public float getRenderDistance() {
         return renderDistance;
+    }
+    
+    public static boolean pointInsideFrustum(Camera cam, Vector3f point) {
+        for (int i = 0; i < 6; i++) {
+            if (cam.getWorldPlane(i).whichSide(point) == Plane.Side.Negative) {
+                return false;
+            }
+        }
+        return true;
     }
     
 }

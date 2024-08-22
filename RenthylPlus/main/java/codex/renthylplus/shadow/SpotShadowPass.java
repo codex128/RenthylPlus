@@ -25,17 +25,14 @@ public class SpotShadowPass extends ShadowOcclusionPass<SpotLight> {
     
     public SpotShadowPass(int size) {
         super(Light.Type.Spot, 1, size);
+        shadowCam = new Camera(shadowMapDef.getMapDef().getWidth(), shadowMapDef.getMapDef().getHeight());
     }
 
     @Override
     protected Camera getShadowCamera(FGRenderContext context, GeometryQueue occluders, SpotLight light, int index) {
         
-        if (shadowCam == null) {
-            shadowCam = context.getViewPort().getCamera().clone();
-        }
-        
-        if (range != light.getSpotRange() || outerAngle != light.getSpotOuterAngle()
-                || !shadowCam.getLocation().equals(light.getPosition()) || !direction.equals(light.getDirection())) {
+        //if (range != light.getSpotRange() || outerAngle != light.getSpotOuterAngle()
+        //        || !shadowCam.getLocation().equals(light.getPosition()) || !direction.equals(light.getDirection())) {
             range = light.getSpotRange();
             outerAngle = light.getSpotOuterAngle();
             direction.set(light.getDirection());
@@ -44,14 +41,14 @@ public class SpotShadowPass extends ShadowOcclusionPass<SpotLight> {
             shadowCam.setLocation(light.getPosition());
             shadowCam.update();
             shadowCam.updateViewProjection();
-        }
+        //}
         
         return shadowCam;
         
     }
     @Override
     protected boolean lightSourceInsideFrustum(Camera cam, SpotLight light) {
-        return cam.contains(light.getPosition());
+        return ShadowOcclusionPass.pointInsideFrustum(cam, light.getPosition());
     }
     
 }

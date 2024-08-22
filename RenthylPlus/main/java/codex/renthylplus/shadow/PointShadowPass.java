@@ -30,11 +30,11 @@ public class PointShadowPass extends ShadowOcclusionPass<PointLight> {
             radii[i] = -1;
         }
         //bottom
-        shadowCams[0].setAxes(Vector3f.UNIT_X.mult(-1f), Vector3f.UNIT_Z.mult(-1f), Vector3f.UNIT_Y.mult(-1f));
+        shadowCams[2].setAxes(Vector3f.UNIT_X.mult(-1f), Vector3f.UNIT_Z.mult(-1f), Vector3f.UNIT_Y.mult(-1f));
         //top
         shadowCams[1].setAxes(Vector3f.UNIT_X.mult(-1f), Vector3f.UNIT_Z, Vector3f.UNIT_Y);
         //forward
-        shadowCams[2].setAxes(Vector3f.UNIT_X.mult(-1f), Vector3f.UNIT_Y, Vector3f.UNIT_Z.mult(-1f));
+        shadowCams[0].setAxes(Vector3f.UNIT_X.mult(-1f), Vector3f.UNIT_Y, Vector3f.UNIT_Z.mult(-1f));
         //backward
         shadowCams[3].setAxes(Vector3f.UNIT_X, Vector3f.UNIT_Y, Vector3f.UNIT_Z);
         //left
@@ -57,7 +57,7 @@ public class PointShadowPass extends ShadowOcclusionPass<PointLight> {
     }
     @Override
     protected boolean lightSourceInsideFrustum(Camera cam, PointLight light) {
-        return cam.contains(light.getPosition());
+        return ShadowOcclusionPass.pointInsideFrustum(cam, light.getPosition());
     }
     
 }
