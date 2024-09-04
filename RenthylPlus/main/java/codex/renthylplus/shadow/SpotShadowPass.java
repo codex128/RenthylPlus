@@ -18,7 +18,7 @@ import com.jme3.renderer.Camera;
  */
 public class SpotShadowPass extends ShadowOcclusionPass<SpotLight> {
     
-    private Camera shadowCam;
+    private final Camera shadowCam;
     private final Vector3f direction = new Vector3f();
     private float range = -1;
     private float outerAngle = -1;
@@ -31,8 +31,8 @@ public class SpotShadowPass extends ShadowOcclusionPass<SpotLight> {
     @Override
     protected Camera getShadowCamera(FGRenderContext context, GeometryQueue occluders, SpotLight light, int index) {
         
-        //if (range != light.getSpotRange() || outerAngle != light.getSpotOuterAngle()
-        //        || !shadowCam.getLocation().equals(light.getPosition()) || !direction.equals(light.getDirection())) {
+        if (range != light.getSpotRange() || outerAngle != light.getSpotOuterAngle()
+                || !shadowCam.getLocation().equals(light.getPosition()) || !direction.equals(light.getDirection())) {
             range = light.getSpotRange();
             outerAngle = light.getSpotOuterAngle();
             direction.set(light.getDirection());
@@ -41,7 +41,7 @@ public class SpotShadowPass extends ShadowOcclusionPass<SpotLight> {
             shadowCam.setLocation(light.getPosition());
             shadowCam.update();
             shadowCam.updateViewProjection();
-        //}
+        }
         
         return shadowCam;
         

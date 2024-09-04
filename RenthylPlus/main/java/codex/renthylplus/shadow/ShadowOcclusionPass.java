@@ -98,7 +98,7 @@ public abstract class ShadowOcclusionPass <T extends Light> extends RenderPass {
                 map.setRange(shadowCam.getFrustumNear(), shadowCam.getFrustumFar());
                 FrameBuffer.RenderBuffer current = fb.getDepthTarget();
                 if (current == null || current.getTexture() != map.getMap()) {
-                    fb.setDepthTarget(FrameBuffer.target(map.getMap()));
+                    fb.setDepthTarget(FrameBuffer.FrameBufferTarget.newTarget(map.getMap()));
                     fb.setUpdateNeeded();
                 }
                 renderer.setFrameBuffer(fb);

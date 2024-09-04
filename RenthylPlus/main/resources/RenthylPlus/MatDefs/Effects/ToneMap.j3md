@@ -1,0 +1,17 @@
+MaterialDef ToneMap {
+    
+    MaterialParameters {
+        
+        Texture2D ColorMap
+        Texture2D ToneMap
+        Vector2 ToneTexelSize
+        
+    }
+    
+    Technique {
+        
+        VertexShader   GLSL400 GLSL310 GLSL150 : RenthylCore/MatDefs/Fullscreen/Screen.vert
+        FragmentShader GLSL400 GLSL310 GLSL150 : RenthylPlus/MatDefs/Effects/ToneMap.frag
+        
+    }
+}
