@@ -80,7 +80,7 @@ public class LightImagePass extends RenderPass {
     private final LightImagePacker packer = new LightImagePacker();
     private ResourceTicket<LightList> lights;
     private ResourceTicket<TiledRenderGrid> tileInfo;
-    private ResourceTicket<HashMap<Light, Integer>> lightShadowIndices;
+    private ResourceTicket<Light[]> lightShadowIndices;
     private ResourceTicket<Texture2D>[] textures;
     private ResourceTicket<Texture2D>[] tileTextures;
     private ResourceTicket<Integer> numLights;
@@ -133,7 +133,7 @@ public class LightImagePass extends RenderPass {
     protected void execute(FGRenderContext context) {
         LightList lightList = resources.acquire(lights);
         TiledRenderGrid grid = resources.acquireOrElse(tileInfo, null);
-        HashMap<Light, Integer> indexMap = resources.acquireOrElse(lightShadowIndices, null);
+        Light[] indexMap = resources.acquireOrElse(lightShadowIndices, null);
         Camera cam = context.getViewPort().getCamera();
         Texture2D tiles = null;
         Texture2D indices = null;

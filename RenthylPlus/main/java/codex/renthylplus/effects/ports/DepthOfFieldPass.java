@@ -1,131 +1,84 @@
 /*
- * Copyright (c) 2024, codex
- * 
+ * Copyright (c) 2024 jMonkeyEngine
+ * All rights reserved.
+ *
  * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- * 
- * 1. Redistributions of source code must retain the above copyright notice, this
- *    list of conditions and the following disclaimer.
- * 
- * 2. Redistributions in binary form must reproduce the above copyright notice,
- *    this list of conditions and the following disclaimer in the documentation
- *    and/or other materials provided with the distribution.
- * 
- * 3. Neither the name of the copyright holder nor the names of its
- *    contributors may be used to endorse or promote products derived from
- *    this software without specific prior written permission.
- * 
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * modification, are permitted provided that the following conditions are
+ * met:
+ *
+ * * Redistributions of source code must retain the above copyright
+ *   notice, this list of conditions and the following disclaimer.
+ *
+ * * Redistributions in binary form must reproduce the above copyright
+ *   notice, this list of conditions and the following disclaimer in the
+ *   documentation and/or other materials provided with the distribution.
+ *
+ * * Neither the name of 'jMonkeyEngine' nor the names of its contributors
+ *   may be used to endorse or promote products derived from this software
+ *   without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package codex.renthylplus.effects;
+package codex.renthylplus.effects.ports;
 
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
-import codex.renthyl.resources.ResourceTicket;
-import codex.renthyl.definitions.TextureDef;
-import codex.renthyl.modules.RenderPass;
+import codex.renthylplus.effects.JmeFilterPass;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
 import com.jme3.export.OutputCapsule;
 import com.jme3.material.Material;
-import com.jme3.texture.FrameBuffer;
-import com.jme3.texture.Texture2D;
 import java.io.IOException;
 
 /**
- * Port of {@link com.jme3.post.filters.DepthOfFieldFilter} to a RenderPass.
- * <p>
- * Inputs:
- * <ul>
- *   <li>Color ({@link Texture2D}): scene color texture.</li>
- *   <li>Depth ({@link Texture2D}): scene depth texture.</li>
- * </ul>
- * Outputs:
- * <ul>
- *   <li>Color ({@link Texture2D}): resulting color texture.</li>
- * </ul>
- * 
+ *
  * @author codex
  */
-public class DepthOfFieldPass extends RenderPass {
+public class DepthOfFieldPass extends JmeFilterPass {
     
-    private ResourceTicket<Texture2D> color, depth;
-    private ResourceTicket<Texture2D> result;
-    private final TextureDef<Texture2D> texDef = TextureDef.texture2D();
     private Material material;
     private float focusDistance = 50f;
     private float focusRange = 10f;
     private float blurScale = 1f;
     private float blurThreshold = 0.2f;
+    private float xScale;
+    private float yScale;
     private boolean debugUnfocus;
+
+    /**
+     * Creates a DepthOfField filter
+     */
+    public DepthOfFieldPass() {}
     
     @Override
-    protected void initialize(FrameGraph frameGraph) {
-        color = addInput("Color");
-        depth = addInput("Depth");
-        result = addOutput("Color");
+    protected void init(FrameGraph frameGraph) {
         material = new Material(frameGraph.getAssetManager(), "Common/MatDefs/Post/DepthOfField.j3md");
         material.setFloat("FocusDistance", focusDistance);
         material.setFloat("FocusRange", focusRange);
         material.setFloat("BlurThreshold", blurThreshold);
         material.setBoolean("DebugUnfocus", debugUnfocus);
+        add(new Subpass(material, true, true) {
+            @Override
+            public void beforeRender(FGRenderContext context) {
+                xScale = 1.0f / getDef().getWidth();
+                yScale = 1.0f / getDef().getHeight();
+                material.setFloat("XScale", blurScale * xScale);
+                material.setFloat("YScale", blurScale * yScale);
+            }
+        });
     }
-    @Override
-    protected void prepare(FGRenderContext context) {
-        declare(texDef, result);
-        reserve(result);
-        reference(color, depth);
-        texDef.setSize(context.getWidth(), context.getHeight());
-        material.setFloat("XScale", blurScale/context.getWidth());
-        material.setFloat("YScale", blurScale/context.getHeight());
-    }
-    @Override
-    protected void execute(FGRenderContext context) {
-        FrameBuffer fb = getFrameBuffer(context, 1);
-        resources.acquireColorTarget(fb, result);
-        context.getRenderer().setFrameBuffer(fb);
-        context.getRenderer().clearBuffers(true, true, true);
-        material.setTexture("Texture", resources.acquire(color));
-        material.setTexture("DepthTexture", resources.acquire(depth));
-        context.renderFullscreen(material);
-    }
-    @Override
-    protected void reset(FGRenderContext context) {}
-    @Override
-    protected void cleanup(FrameGraph frameGraph) {
-        material = null;
-    }
-    @Override
-    public void write(JmeExporter ex) throws IOException {
-        super.write(ex);
-        OutputCapsule oc = ex.getCapsule(this);
-        oc.write(blurScale, "blurScale", 1f);
-        oc.write(blurThreshold, "blurThreshold", 0.2f);
-        oc.write(focusDistance, "focusDistance", 50f);
-        oc.write(focusRange, "focusRange", 10f);
-        oc.write(debugUnfocus, "debugUnfocus", false);
-    }
-    @Override
-    public void read(JmeImporter im) throws IOException {
-        super.read(im);
-        InputCapsule ic = im.getCapsule(this);
-        blurScale = ic.readFloat("blurScale", 1f);
-        blurThreshold = ic.readFloat("blurThreshold", 0.2f);
-        focusDistance = ic.readFloat("focusDistance", 50f);
-        focusRange = ic.readFloat("focusRange", 10f);
-        debugUnfocus = ic.readBoolean("debugUnfocus", false);
-    }
-    
+
     /**
      *  Sets the distance at which objects are purely in focus.
      *
@@ -139,7 +92,7 @@ public class DepthOfFieldPass extends RenderPass {
         }
 
     }
-    
+
     /**
      * returns the focus distance
      * @return the distance
@@ -147,7 +100,7 @@ public class DepthOfFieldPass extends RenderPass {
     public float getFocusDistance() {
         return focusDistance;
     }
-    
+
     /**
      *  Sets the range to either side of focusDistance where the
      *  objects go gradually out of focus.  Less than focusDistance - focusRange
@@ -162,7 +115,7 @@ public class DepthOfFieldPass extends RenderPass {
         }
 
     }
-    
+
     /**
      * returns the focus range
      * @return the distance
@@ -170,7 +123,7 @@ public class DepthOfFieldPass extends RenderPass {
     public float getFocusRange() {
         return focusRange;
     }
-    
+
     /**
      *  Sets the blur amount by scaling the convolution filter up or
      *  down.  A value of 1 (the default) performs a sparse 5x5 evenly
@@ -187,8 +140,12 @@ public class DepthOfFieldPass extends RenderPass {
      */
     public void setBlurScale(float f) {
         this.blurScale = f;
+        if (material != null) {
+            material.setFloat("XScale", blurScale * xScale);
+            material.setFloat("YScale", blurScale * yScale);
+        }
     }
-    
+
     /**
      * returns the blur scale
      * @return the scale
@@ -196,7 +153,7 @@ public class DepthOfFieldPass extends RenderPass {
     public float getBlurScale() {
         return blurScale;
     }
-    
+
     /**
      *  Sets the minimum blur factor before the convolution filter is
      *  calculated.  The default is 0.2 which means if the "unfocus"
@@ -219,7 +176,7 @@ public class DepthOfFieldPass extends RenderPass {
             material.setFloat("BlurThreshold", blurThreshold);
         }
     }
-    
+
     /**
      * returns the blur threshold.
      * @return the threshold
@@ -227,7 +184,7 @@ public class DepthOfFieldPass extends RenderPass {
     public float getBlurThreshold() {
         return blurThreshold;
     }
-    
+ 
     /**
      *  Turns on/off debugging of the 'unfocus' value that is used to
      *  mix the convolution filter.  When this is on, the 'unfocus' value
@@ -243,13 +200,31 @@ public class DepthOfFieldPass extends RenderPass {
             material.setBoolean("DebugUnfocus", debugUnfocus);
         }
     } 
-    
-    /**
-     * 
-     * @return 
-     */
+ 
     public boolean getDebugUnfocus() {
         return debugUnfocus;
+    }    
+    
+    @Override
+    public void write(JmeExporter ex) throws IOException {
+        super.write(ex);
+        OutputCapsule oc = ex.getCapsule(this);
+        oc.write(blurScale, "blurScale", 1f);
+        oc.write(blurThreshold, "blurThreshold", 0.2f);
+        oc.write(focusDistance, "focusDistance", 50f);
+        oc.write(focusRange, "focusRange", 10f);
+        oc.write(debugUnfocus, "debugUnfocus", false); // strange to write this I guess
+    }
+
+    @Override
+    public void read(JmeImporter im) throws IOException {
+        super.read(im);
+        InputCapsule ic = im.getCapsule(this);
+        blurScale = ic.readFloat("blurScale", 1f);
+        blurThreshold = ic.readFloat("blurThreshold", 0.2f);
+        focusDistance = ic.readFloat("focusDistance", 50f);
+        focusRange = ic.readFloat("focusRange", 10f);
+        debugUnfocus = ic.readBoolean("debugUnfocus", false);
     }
     
 }
