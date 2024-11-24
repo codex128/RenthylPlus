@@ -10,6 +10,7 @@ import codex.renthyl.modules.OutputPass;
 import codex.renthyl.modules.geometry.SceneEnqueuePass;
 import codex.renthylplus.vxgi.LightArrayPass;
 import codex.renthylplus.vxgi.LightGatherPass;
+import codex.renthylplus.vxgi.VoxelDebugSlicePass;
 import codex.renthylplus.vxgi.VoxelEnvSetupPass;
 import codex.renthylplus.vxgi.VoxelVisualizerPass;
 import codex.renthylplus.vxgi.VoxelizationPass;
@@ -18,7 +19,6 @@ import com.jme3.light.AmbientLight;
 import com.jme3.light.DirectionalLight;
 import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
-import com.jme3.math.FastMath;
 import com.jme3.math.Vector3f;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.shape.Box;
@@ -74,6 +74,7 @@ public class TestVoxelConeTracing extends SimpleApplication {
         LightArrayPass lightArray = fg.add(new LightArrayPass());
         VoxelizationPass voxels = fg.add(new VoxelizationPass());
         VoxelVisualizerPass vis = fg.add(new VoxelVisualizerPass());
+        VoxelDebugSlicePass debug = fg.add(new VoxelDebugSlicePass());
         OutputPass out = fg.add(new OutputPass());
         
         lightArray.makeInput(lightGather, "Lights", "Lights");
@@ -82,17 +83,18 @@ public class TestVoxelConeTracing extends SimpleApplication {
         voxels.makeInput(lightArray, "Ambient", "Ambient");
         voxels.makeInput(voxelEnv, "GridSize", "GridSize");
         voxels.makeInput(voxelEnv, "Camera", "Camera");
-        voxels.makeInput(voxelEnv, "Bounds", "Bounds");
+        voxels.makeInput(voxelEnv, "Bounds", "Bounds"); 
         vis.makeInput(voxels, "Voxels", "Voxels");
         vis.makeInput(voxelEnv, "Bounds", "Bounds");
         vis.makeInput(enqueue, "Default", "Geometry");
+        debug.makeInput(voxels, "Voxels", "Voxels");
         //out.makeInput(voxels, "ScreenSpaceResult", "Color");
-        out.makeInput(vis, "Color", "Color");
+        //out.makeInput(vis, "Color", "Color");
+        out.makeInput(debug, "Result", "Color");
         
     }
     @Override
     public void simpleUpdate(float tpf) {
-        //System.out.println("update");
         cam.lookAt(Vector3f.ZERO, Vector3f.UNIT_Y);
     }
     

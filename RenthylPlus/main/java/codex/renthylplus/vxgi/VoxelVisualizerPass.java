@@ -70,7 +70,6 @@ public class VoxelVisualizerPass extends RenderPass {
         material.setVector3("GridMax", max);
         material.setInt("GridSize", 64);
         context.getRenderManager().setForcedMaterial(material);
-        System.out.println("visualization");
         
         //Material m = new Material(frameGraph.getAssetManager(), "Common/MatDefs/Misc/Unshaded.j3md");
         //m.setColor("Color", ColorRGBA.Blue);

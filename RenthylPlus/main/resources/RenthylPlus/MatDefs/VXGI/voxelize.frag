@@ -13,7 +13,7 @@ uniform vec3 g_CameraPosition;
 uniform vec4 m_LightData[NUM_LIGHTS];
 uniform vec4 m_AmbientLight;
 
-/*layout(RGBA8)*/ writeonly uniform image3D m_VoxelMap;
+layout(RGBA8) uniform image3D m_VoxelMap;
 uniform int m_GridSize;
 
 varying vec3 wPosition;
@@ -160,11 +160,12 @@ void main() {
     
     // debug
     gl_FragColor = vec4(vPosition, 1.0);
-    result = vec4(0.0, 1.0, 1.0, 1.0);
+    result = vec4(255.0);
     
     // this will likely produce flickering
     //ivec3 gridSize = imageSize(m_VoxelMap);
     imageStore(m_VoxelMap, ivec3(m_GridSize * vPosition), result);
+    //imageAtomicMax(m_VoxelMap, ivec3(m_GridSize * vPosition), result);
    
 }
 

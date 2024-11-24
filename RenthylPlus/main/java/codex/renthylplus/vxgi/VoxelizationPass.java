@@ -7,36 +7,24 @@ package codex.renthylplus.vxgi;
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.GeometryQueue;
-import codex.renthyl.client.GraphSource;
 import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.modules.RenderPass;
 import codex.renthyl.resources.ResourceTicket;
-import codex.renthyl.util.Defines;
 import codex.renthyl.util.GeometryRenderHandler;
-import com.jme3.asset.AssetManager;
 import com.jme3.bounding.BoundingBox;
-import com.jme3.light.LightList;
 import com.jme3.material.Material;
 import com.jme3.material.RenderState;
-import com.jme3.material.TechniqueDef;
-import com.jme3.material.logic.TechniqueDefLogic;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
-import com.jme3.math.Vector4f;
 import com.jme3.renderer.Camera;
-import com.jme3.renderer.Caps;
 import com.jme3.renderer.RenderManager;
-import com.jme3.renderer.Renderer;
 import com.jme3.scene.Geometry;
-import com.jme3.shader.DefineList;
-import com.jme3.shader.Shader;
 import com.jme3.shader.VarType;
 import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Image;
 import com.jme3.texture.Texture;
 import com.jme3.texture.Texture2D;
 import com.jme3.texture.Texture3D;
-import java.util.EnumSet;
 
 /**
  *
@@ -53,7 +41,7 @@ public class VoxelizationPass extends RenderPass implements GeometryRenderHandle
     private ResourceTicket<Texture2D> lightContribution;
     private ResourceTicket<Texture3D> voxels;
     private ResourceTicket<Texture2D> renderTarget;
-    private final TextureDef<Texture3D> voxelDef = TextureDef.texture3D(Image.Format.RGBA32F);
+    private final TextureDef<Texture3D> voxelDef = TextureDef.texture3D(Image.Format.RGBA8);
     private final TextureDef<Texture2D> renderTargetDef = TextureDef.texture2D();
     private Material material;
     private final Vector3f boundMin = new Vector3f();
@@ -77,6 +65,7 @@ public class VoxelizationPass extends RenderPass implements GeometryRenderHandle
         rs.setFaceCullMode(RenderState.FaceCullMode.Off);
         voxelDef.setMagFilter(Texture.MagFilter.Bilinear);
         voxelDef.setMinFilter(Texture.MinFilter.Trilinear);
+        voxelDef.setDebugEnabled(true);
     }
     @Override
     protected void prepare(FGRenderContext context) {
@@ -103,7 +92,7 @@ public class VoxelizationPass extends RenderPass implements GeometryRenderHandle
         // setup camera
         //Camera cam = resources.acquire(camera);
         //context.getRenderManager().setCamera(cam, cam.isParallelProjection());
-        System.out.println("voxelization");
+        context.resizeCamera(n, n, false, false, true);
         
         // acquire framebuffer for rasterizing geometry into the voxel grid
         FrameBuffer fb = getFrameBuffer(n, n, 1);
@@ -123,12 +112,8 @@ public class VoxelizationPass extends RenderPass implements GeometryRenderHandle
         material.setInt("GridSize", n);
         context.getRenderManager().setForcedMaterial(material);
         
-        System.out.println(context.getRenderManager().getCurrentCamera().getWidth());
-        
         // rasterize geometries into the voxel grid
-        //resources.acquire(geometry).render(context.getRenderManager(), this);
-        context.resizeCamera(n, n, false, false, false);
-        //context.resizeCamera(768, 768, true, false, true);
+        resources.acquire(geometry).render(context.getRenderManager(), this);
         
     }
     @Override
