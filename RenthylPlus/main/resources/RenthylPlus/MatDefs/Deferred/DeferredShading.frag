@@ -123,7 +123,6 @@ void main(){
                     if (shadowIndex > 0) {
                         int table = int(texture2D(m_LightContributionMap, innerTexCoord).r);
                         if (((table >> (shadowIndex - 1)) & 1) == 1) {
-                            INCREMENT_LIGHT;
                             continue;
                         }
                     }
@@ -161,14 +160,8 @@ void main(){
                 gl_FragColor.rgb += lightColor.rgb * diffuseColor.rgb  * vec3(light.x) +
                                     lightColor.rgb * specularColor.rgb * vec3(light.y);
                 
-                #ifdef SHADOW
-                        }
-                    }
-                #endif
             }
         #endif
-        
-        //gl_FragColor.rgb = AmbientSum;
         
     } else if (shadingModelId == PBR_LIGHTING) {
         

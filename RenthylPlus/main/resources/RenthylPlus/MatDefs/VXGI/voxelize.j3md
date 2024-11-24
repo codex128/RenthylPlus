@@ -1,0 +1,51 @@
+MaterialDef Voxelize {
+
+    MaterialParameters {
+        
+        // voxels
+        Texture3D VoxelMap
+        Int GridSize
+        Vector3 GridMin
+        Vector3 GridMax
+        Boolean TemporalShading
+        
+        // lighting
+        FloatArray LightData
+        Texture2D LightContributionMap
+        Color AmbientLight
+        Int NumLights
+        
+        // PBR
+        Texture2D BaseColorMap
+        Texture2D EmissiveMap
+        Color BaseColor : 1.0 1.0 1.0 1.0
+        Color Emissive
+        Float EmissivePower : 2f
+        Float EmissiveIntensity : 5f
+        Float AlphaDiscardThreshold
+        
+    }
+
+    Technique {
+    
+        VertexShader   GLSL450 GLSL430 : RenthylPlus/MatDefs/VXGI/voxelize.vert
+        GeometryShader GLSL450 GLSL430 : RenthylPlus/MatDefs/VXGI/voxelize.geom
+        FragmentShader GLSL450 GLSL430 : RenthylPlus/MatDefs/VXGI/voxelize.frag
+
+        WorldParameters {
+            WorldMatrix
+            WorldNormalMatrix
+        }
+
+        Defines {
+            NUM_LIGHTS : NumLights
+            BASECOLORMAP : BaseColorMap
+            EMISSIVEMAP : EmissiveMap
+            SHADOWS : LightContributionMap
+            DISCARD_ALPHA : AlphaDiscardThreshold
+            TEMPORAL : TemporalShading
+        }
+        
+    }
+
+}

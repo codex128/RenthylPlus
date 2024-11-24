@@ -48,7 +48,8 @@ import java.awt.Point;
 import java.io.IOException;
 
 /**
- *
+ * Screenspace reflection pass.
+ * 
  * @author codex
  */
 public class SSRPass extends JmeFilterPass {

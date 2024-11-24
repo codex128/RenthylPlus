@@ -44,7 +44,9 @@ public class FilterStack <R extends RenderModule> extends RenderContainer<R> {
         } else {
             makeInternalOutput(module, "Result", "Result");
         }
-        makeInternalInput("Depth", "Depth", module);
+        if (module.getInput("Depth") != null) {
+            makeInternalInput("Depth", "Depth", module);
+        }
         return module;
     }
     

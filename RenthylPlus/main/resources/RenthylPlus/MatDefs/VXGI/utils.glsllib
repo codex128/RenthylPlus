@@ -1,0 +1,15 @@
+
+float random(vec3 v) {
+    float a = dot(v, vec3(29.29384, 62.29384, 48.23478));
+    a = sin(a);
+    a = a * 293487.1273498;
+    a = fract(a);
+    return a;
+}
+
+vec3 random3(vec3 v){
+    v = fract(v * vec3(443.897, 441.423, 437.195));
+    v += dot(v, v.zxy + vec3(31.31));
+    return fract((v.xyz + v.yzx) * v.zyx);
+}
+

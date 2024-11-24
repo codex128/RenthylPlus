@@ -9,9 +9,11 @@
     #import "Common/ShaderLib/MorphAnim.glsllib"
 #endif
 
+uniform vec3 m_GridMin;
+uniform vec3 m_GridMax;
+
 attribute vec3 inPosition;
-attribute vec2 inTexCoord;
-varying vec2 texCoord;
+varying vec3 vPosition;
 
 void main() {
 
@@ -25,8 +27,10 @@ void main() {
         Skinning_Compute(modelSpacePos);
     #endif
     
+    vec4 world = TransformWorld(modelSpacePos);
     gl_Position = TransformWorldViewProjection(modelSpacePos);
-    texCoord = inTexCoord;
+    
+    vPosition = (world.xyz - m_GridMin) / (m_GridMax - m_GridMin);
     
 }
 

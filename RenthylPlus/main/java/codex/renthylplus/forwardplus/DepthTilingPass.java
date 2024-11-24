@@ -4,13 +4,14 @@
  */
 package codex.renthylplus.forwardplus;
 
+import codex.jmecompute.ArgType;
+import codex.jmecompute.WorkSize;
 import codex.jmecompute.opengl.GLComputeShader;
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.modules.RenderPass;
 import codex.renthyl.resources.ResourceTicket;
-import com.jme3.shader.VarType;
 import com.jme3.texture.Image;
 import com.jme3.texture.Texture;
 import com.jme3.texture.Texture2D;
@@ -22,7 +23,7 @@ import com.jme3.texture.Texture2D;
 public class DepthTilingPass extends RenderPass {
 
     private ResourceTicket<Texture2D> sceneDepth;
-    private ResourceTicket<Texture2D> tiledDepth;
+    private ResourceTicket<Texture2D> depthRangeTiles;
     private final TextureDef<Texture2D> tileDef = TextureDef.texture2D();
     private GLComputeShader shader;
     private int tileSize = 16;
@@ -30,7 +31,7 @@ public class DepthTilingPass extends RenderPass {
     @Override
     protected void initialize(FrameGraph frameGraph) {
         sceneDepth = addInput("SceneDepth");
-        tiledDepth = addOutput("TiledDepth");
+        depthRangeTiles = addOutput("DepthRangeTiles");
         tileDef.setMagFilter(Texture.MagFilter.Nearest);
         tileDef.setMinFilter(Texture.MinFilter.NearestNoMipMaps);
         tileDef.setFormat(Image.Format.RG32F);
@@ -38,8 +39,8 @@ public class DepthTilingPass extends RenderPass {
     }
     @Override
     protected void prepare(FGRenderContext context) {
-        declare(tileDef, tiledDepth);
-        reserve(tiledDepth);
+        declare(tileDef, depthRangeTiles);
+        reserve(depthRangeTiles);
         reference(sceneDepth);
     }
     @Override
@@ -48,10 +49,9 @@ public class DepthTilingPass extends RenderPass {
         int w = inTex.getImage().getWidth() / tileSize;
         int h = inTex.getImage().getHeight() / tileSize;
         tileDef.setSize(w, h);
-        shader.set("DepthTexture", VarType.Texture2D, inTex);
-        shader.set("TileTexture", VarType.Texture2D, resources.acquire(tiledDepth));
-        shader.set("TileSize", VarType.Float, tileSize);
-        shader.execute(context.getRenderer(), w, h, 1);
+        shader.set("DepthTexture", ArgType.Texture, inTex);
+        shader.set("TileTexture", ArgType.Texture, resources.acquire(depthRangeTiles));
+        shader.execute(new WorkSize(w, h, 1).offloadToLocal(tileSize));
     }
     @Override
     protected void reset(FGRenderContext context) {}

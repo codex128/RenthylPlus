@@ -35,6 +35,7 @@ import codex.renthyl.GeometryQueue;
 import codex.renthyl.resources.ResourceTicket;
 import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.modules.RenderPass;
+import codex.renthyl.util.GeometryRenderHandler;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
@@ -42,8 +43,6 @@ import com.jme3.scene.Geometry;
 import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Image;
 import com.jme3.texture.Texture2D;
-import java.util.function.Function;
-import com.jme3.renderer.GeometryRenderHandler;
 import com.jme3.renderer.RenderManager;
 import com.jme3.renderer.queue.NullComparator;
 
@@ -69,13 +68,14 @@ public class GBufferPass extends RenderPass implements GeometryRenderHandler {
     private static final MaterialAdapter adapter = new MaterialAdapter();
     
     static {
-        adapter.add("Common/MatDefs/Light/PBRLighting.j3md", "RenthylPlus/MatDefs/GBuffer/PBRLighting.j3md");
-        adapter.add("Common/MatDefs/Light/Lighting.j3md", "RenthylPlus/MatDefs/GBuffer/Lighting.j3md");
-        adapter.add("Common/MatDefs/Misc/Unshaded.j3md", "RenthylPlus/MatDefs/GBuffer/Unshaded.j3md");
-        adapter.add("Common/MatDefs/Terrain/Terrain.j3md", "RenthylPlus/MatDefs/GBuffer/Terrain.j3md");
-        adapter.add("Common/MatDefs/Terrain/PBRTerrain.j3md", "RenthylPlus/MatDefs/GBuffer/PBRTerrain.j3md");
-        adapter.add("Common/MatDefs/Terrain/AdvancedPBRTerrain.j3md", "RenthylPlus/MatDefs/GBuffer/AdvancedPBRTerrain.j3md");
-        adapter.add("Common/MatDefs/Terrain/TerrainLighting.j3md", "RenthylPlus/MatDefs/GBuffer/TerrainLighting.j3md");
+        String gbuffer = "RenthylPlus/MatDefs/GBuffer/";
+        adapter.add("Common/MatDefs/Light/PBRLighting.j3md",          gbuffer + "PBRLighting.j3md");
+        adapter.add("Common/MatDefs/Light/Lighting.j3md",             gbuffer + "Lighting.j3md");
+        adapter.add("Common/MatDefs/Misc/Unshaded.j3md",              gbuffer + "Unshaded.j3md");
+        adapter.add("Common/MatDefs/Terrain/Terrain.j3md",            gbuffer + "Terrain.j3md");
+        adapter.add("Common/MatDefs/Terrain/PBRTerrain.j3md",         gbuffer + "PBRTerrain.j3md");
+        adapter.add("Common/MatDefs/Terrain/AdvancedPBRTerrain.j3md", gbuffer + "AdvancedPBRTerrain.j3md");
+        adapter.add("Common/MatDefs/Terrain/TerrainLighting.j3md",    gbuffer + "TerrainLighting.j3md");
     }
     
     private AssetManager assetManager;
@@ -90,17 +90,17 @@ public class GBufferPass extends RenderPass implements GeometryRenderHandler {
         geometry = addInput("Geometry");
         gbuffers = addOutputGroup("GBufferData", 5);
         skipped = addOutput("SkippedGeometry");
-        Function<Image, Texture2D> tex = img -> new Texture2D(img);
-        texDefs[0] = new TextureDef<>(Texture2D.class, tex, Image.Format.RGBA16F);
-        texDefs[1] = new TextureDef<>(Texture2D.class, tex, Image.Format.RGBA16F);
-        texDefs[2] = new TextureDef<>(Texture2D.class, tex, Image.Format.RGBA16F);
-        texDefs[3] = new TextureDef<>(Texture2D.class, tex, Image.Format.RGBA32F);
-        texDefs[4] = new TextureDef<>(Texture2D.class, tex, Image.Format.Depth);
+        texDefs[0] = TextureDef.texture2D(Image.Format.RGBA16F);
+        texDefs[1] = TextureDef.texture2D(Image.Format.RGBA16F);
+        texDefs[2] = TextureDef.texture2D(Image.Format.RGBA16F);
+        texDefs[3] = TextureDef.texture2D(Image.Format.RGBA32F);
+        texDefs[4] = TextureDef.texture2D(Image.Format.Depth);
         this.assetManager = frameGraph.getAssetManager();
     }
     @Override
     protected void prepare(FGRenderContext context) {
-        int w = context.getWidth(), h = context.getHeight();
+        int w = context.getWidth();
+        int h = context.getHeight();
         for (int i = 0; i < gbuffers.length; i++) {
             texDefs[i].setSize(w, h);
             declare(texDefs[i], gbuffers[i]);
