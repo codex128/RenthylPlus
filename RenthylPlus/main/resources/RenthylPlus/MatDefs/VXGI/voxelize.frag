@@ -13,7 +13,7 @@ uniform vec3 g_CameraPosition;
 uniform vec4 m_LightData[NUM_LIGHTS];
 uniform vec4 m_AmbientLight;
 
-layout(RGBA8) uniform image3D m_VoxelMap;
+layout(RGBA32F) uniform image3D m_VoxelMap;
 uniform int m_GridSize;
 
 varying vec3 wPosition;

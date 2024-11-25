@@ -41,7 +41,7 @@ public class VoxelizationPass extends RenderPass implements GeometryRenderHandle
     private ResourceTicket<Texture2D> lightContribution;
     private ResourceTicket<Texture3D> voxels;
     private ResourceTicket<Texture2D> renderTarget;
-    private final TextureDef<Texture3D> voxelDef = TextureDef.texture3D(Image.Format.RGBA8);
+    private final TextureDef<Texture3D> voxelDef = TextureDef.texture3D(Image.Format.RGBA32F);
     private final TextureDef<Texture2D> renderTargetDef = TextureDef.texture2D();
     private Material material;
     private final Vector3f boundMin = new Vector3f();
@@ -65,7 +65,7 @@ public class VoxelizationPass extends RenderPass implements GeometryRenderHandle
         rs.setFaceCullMode(RenderState.FaceCullMode.Off);
         voxelDef.setMagFilter(Texture.MagFilter.Bilinear);
         voxelDef.setMinFilter(Texture.MinFilter.Trilinear);
-        voxelDef.setDebugEnabled(true);
+        voxelDef.setAccess(Image.Access.ReadWrite);
     }
     @Override
     protected void prepare(FGRenderContext context) {

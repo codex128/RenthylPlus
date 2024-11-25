@@ -23,6 +23,7 @@ import com.jme3.math.Vector3f;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.shape.Box;
 import com.jme3.system.AppSettings;
+import org.lwjgl.opengl.GL45;
 
 /**
  *
@@ -89,8 +90,8 @@ public class TestVoxelConeTracing extends SimpleApplication {
         vis.makeInput(enqueue, "Default", "Geometry");
         debug.makeInput(voxels, "Voxels", "Voxels");
         //out.makeInput(voxels, "ScreenSpaceResult", "Color");
-        //out.makeInput(vis, "Color", "Color");
-        out.makeInput(debug, "Result", "Color");
+        out.makeInput(vis, "Color", "Color");
+        //out.makeInput(debug, "Result", "Color");
         
     }
     @Override
