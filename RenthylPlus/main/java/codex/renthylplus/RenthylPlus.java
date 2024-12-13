@@ -35,7 +35,7 @@ import codex.renthyl.modules.Junction;
 import codex.renthyl.modules.geometry.SceneEnqueuePass;
 import codex.renthyl.modules.geometry.QueueMergePass;
 import codex.renthyl.modules.geometry.OutputGeometryPass;
-import codex.renthylplus.deferred.GBufferPass;
+import codex.renthylplus.deferred.DeferredGBufferPass;
 import codex.renthylplus.deferred.DeferredPass;
 import codex.renthylplus.light.LightImagePass;
 import codex.renthyl.client.GraphSetting;
@@ -82,7 +82,7 @@ public class RenthylPlus {
         Attribute shadowOut = fg.add(new Attribute());
         Attribute tileInfoAttr = fg.add(new Attribute());
         Junction tileJunct1 = fg.add(new Junction(1, 1));
-        GBufferPass gbuf = fg.add(new GBufferPass());
+        DeferredGBufferPass gbuf = fg.add(new DeferredGBufferPass());
         Junction gbufDebugTarget = fg.add(new Junction(5, 1));
         Attribute gbufDebug = fg.add(new Attribute());
         LightImagePass lightImg = fg.add(new RenderThread(async)).add(new LightImagePass());
@@ -182,7 +182,7 @@ public class RenthylPlus {
             
             SceneEnqueuePass enqueue = fg.add(new SceneEnqueuePass(true, true));
             QueueMergePass merge = fg.add(new QueueMergePass(5));
-            GBufferPass gbuf = fg.add(new GBufferPass());
+            DeferredGBufferPass gbuf = fg.add(new DeferredGBufferPass());
             Junction junct = fg.add(new Junction(5, 1));
             OutputPass out = fg.add(new OutputPass());
             

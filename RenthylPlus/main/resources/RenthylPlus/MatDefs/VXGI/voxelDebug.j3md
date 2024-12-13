@@ -3,7 +3,6 @@ MaterialDef Voxelize {
     MaterialParameters {
         
         Texture3D VoxelMap
-        Int GridSize
         Vector3 GridMin
         Vector3 GridMax
         

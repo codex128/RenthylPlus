@@ -31,14 +31,9 @@ void main() {
         Skinning_Compute(modelSpacePos, modelSpaceNorm);
     #endif
     
-    //wPos = TransformWorld(modelSpacePos).xyz;
+    gl_Position = TransformWorld(modelSpacePos);
     wNorm = TransformWorldNormal(modelSpaceNorm);
-    //gl_Position = TransformWorldViewProjection(modelSpacePos);
-    gl_Position = modelSpacePos;
     uv = inTexCoord;
-    
-    // transpose world space to voxel grid space (0 -> 1)
-    //vPos = (wPos - m_GridMin) / (m_GridMax - m_GridMin);
     
     color = m_BaseColor;
     #ifdef VERTEX_COLOR

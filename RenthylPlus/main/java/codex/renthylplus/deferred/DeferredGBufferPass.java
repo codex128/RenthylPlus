@@ -62,7 +62,7 @@ import com.jme3.renderer.queue.NullComparator;
  * 
  * @author codex
  */
-public class GBufferPass extends RenderPass implements GeometryRenderHandler {
+public class DeferredGBufferPass extends RenderPass implements GeometryRenderHandler {
     
     private static final String GBUFFER_PASS = "GBufferPass";
     private static final MaterialAdapter adapter = new MaterialAdapter();

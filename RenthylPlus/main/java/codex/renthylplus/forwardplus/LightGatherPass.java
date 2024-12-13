@@ -5,6 +5,7 @@
 package codex.renthylplus.forwardplus;
 
 import codex.jmecompute.ArgType;
+import codex.jmecompute.UniversalShaderLoader;
 import codex.jmecompute.WorkSize;
 import codex.jmecompute.opengl.GLComputeShader;
 import codex.renthyl.FGRenderContext;
@@ -34,7 +35,8 @@ public class LightGatherPass extends RenderPass {
         lights = addInput("Lights");
         depthRangeTiles = addInput("DepthRangeTiles");
         overlap = addOutput("Overlap");
-        shader = GLComputeShader.load(frameGraph.getAssetManager(), "RenthylPlus/Shaders/ForwardPlus/LightTileGather.glsl");
+        shader = UniversalShaderLoader.loadOpenGLCompute(frameGraph.getAssetManager(),
+                "RenthylPlus/Shaders/ForwardPlus/LightTileGather.glsl");
     }
     @Override
     protected void prepare(FGRenderContext context) {

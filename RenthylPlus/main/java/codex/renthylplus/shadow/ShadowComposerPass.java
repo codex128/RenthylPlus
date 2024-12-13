@@ -29,7 +29,6 @@ public class ShadowComposerPass extends RenderPass {
     private ResourceTicket<Texture2D> recieverDepth;
     private ResourceTicket<Texture2D> lightContribution;
     private ResourceTicket<Light[]> lightShadowIndices;
-    private final TextureDef<Texture2D> sceneDepthDef = TextureDef.texture2D();
     private final TextureDef<Texture2D> contributionDef = TextureDef.texture2D();
     private final RenderState renderState = new RenderState();
     private Light[] indexMap;
@@ -38,12 +37,11 @@ public class ShadowComposerPass extends RenderPass {
     
     @Override
     protected void initialize(FrameGraph frameGraph) {
-        recieverDepth = addInput("RecieverDepth");
+        recieverDepth = addInput("ReceiverDepth");
         addInputList("ShadowMaps");
         lightContribution = addOutput("LightContribution");
         lightShadowIndices = addOutput("LightShadowIndices");
-        sceneDepthDef.setFormat(Image.Format.Depth);
-        contributionDef.setFormat(Image.Format.RGBA32F);
+        contributionDef.setFormat(Image.Format.R32F);
         contributionDef.setMagFilter(Texture.MagFilter.Nearest);
         contributionDef.setMinFilter(Texture.MinFilter.NearestNoMipMaps);
         renderState.setBlendMode(RenderState.BlendMode.Off);
@@ -64,7 +62,6 @@ public class ShadowComposerPass extends RenderPass {
         
         int w = context.getWidth();
         int h = context.getHeight();
-        sceneDepthDef.setSize(w, h);
         contributionDef.setSize(w, h);
         
         // setup render parameters
@@ -82,6 +79,7 @@ public class ShadowComposerPass extends RenderPass {
         indexMap = new Light[Math.min(maps.length, MAX_SHADOW_LIGHTS)];
         for (ShadowMap m : maps) {
             if (m == null) {
+                System.out.println("shadow map is null: skipping");
                 continue;
             }
             int i = indexOf(indexMap, m.getLight());
@@ -94,7 +92,7 @@ public class ShadowComposerPass extends RenderPass {
                 material.setMatrix4("LightViewProjectionMatrix", m.getProjection());
                 material.setInt("LightType", m.getLight().getType().getId());
                 material.setInt("LightIndex", i);
-                material.setVector2("LightRangeInverse", inverse(m.getRange(), tempInvRange));
+                material.setVector2("LightRangeInverse", m.getInverseRange(tempInvRange));
                 context.renderFullscreen(material);
                 renderState.setBlendMode(RenderState.BlendMode.Additive);
             }
@@ -111,17 +109,9 @@ public class ShadowComposerPass extends RenderPass {
     @Override
     protected void cleanup(FrameGraph frameGraph) {}
     
-    private static Vector2f inverse(Vector2f vec, Vector2f store) {
-        if (store == null) {
-            store = new Vector2f();
-        }
-        store.x = 1f / vec.x;
-        store.y = 1f / vec.y;
-        return store;
-    }
     private static int indexOf(Object[] array, Object obj) {
         for (int i = 0; i < array.length; i++) {
-            if (array == obj) {
+            if (array[i] == obj) {
                 return i;
             }
         }

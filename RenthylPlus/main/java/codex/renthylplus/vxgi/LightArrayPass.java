@@ -44,7 +44,7 @@ public class LightArrayPass extends RenderPass {
         lightArray = addOutput("LightArray");
         ambient = addOutput("Ambient");
         probes = addOutput("Probes");
-        arrayDef.setPadding(FLOATS_PER_LIGHT * 3);
+        arrayDef.setPadding(0);
     }
     @Override
     protected void prepare(FGRenderContext context) {
@@ -130,6 +130,9 @@ public class LightArrayPass extends RenderPass {
         for (int i = 0; i < array.length; i++) {
             if (array[i] == element) {
                 return i;
+            }
+            if (array[i] == null) {
+                return -1;
             }
         }
         return -1;

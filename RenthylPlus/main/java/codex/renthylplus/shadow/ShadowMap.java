@@ -52,5 +52,11 @@ public class ShadowMap {
     public Vector2f getRange() {
         return range;
     }
+    public Vector2f getInverseRange(Vector2f store) {
+        if (store == null) {
+            store = new Vector2f();
+        }
+        return store.set(1f/range.x, (range.y * range.x)/(range.x - range.y));
+    }
     
 }

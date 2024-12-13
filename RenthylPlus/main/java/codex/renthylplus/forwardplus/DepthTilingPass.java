@@ -5,6 +5,7 @@
 package codex.renthylplus.forwardplus;
 
 import codex.jmecompute.ArgType;
+import codex.jmecompute.UniversalShaderLoader;
 import codex.jmecompute.WorkSize;
 import codex.jmecompute.opengl.GLComputeShader;
 import codex.renthyl.FGRenderContext;
@@ -35,7 +36,8 @@ public class DepthTilingPass extends RenderPass {
         tileDef.setMagFilter(Texture.MagFilter.Nearest);
         tileDef.setMinFilter(Texture.MinFilter.NearestNoMipMaps);
         tileDef.setFormat(Image.Format.RG32F);
-        shader = GLComputeShader.load(frameGraph.getAssetManager(), "RenthylPlus/Shaders/DepthTileCompute.glsl");
+        shader = UniversalShaderLoader.loadOpenGLCompute(frameGraph.getAssetManager(),
+                "RenthylPlus/Shaders/DepthTileCompute.glsl");
     }
     @Override
     protected void prepare(FGRenderContext context) {

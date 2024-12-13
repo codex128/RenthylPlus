@@ -4,18 +4,21 @@ MaterialDef Voxelize {
         
         // voxels
         Texture3D VoxelMap
-        Int GridSize
+        
+        // temporal
+        Texture3D TemporalVoxelMap
         Vector3 GridMin
         Vector3 GridMax
-        Boolean TemporalShading
+        Int GridSize
+        Float Attenuation : 0.3
         
-        // lighting
+        // light
         FloatArray LightData
-        Texture2D LightContributionMap
+        Texture3D LightContributionMap
         Color AmbientLight
-        Int NumLights
+        Int LightDataSize
         
-        // PBR
+        // coloring
         Texture2D BaseColorMap
         Texture2D EmissiveMap
         Color BaseColor : 1.0 1.0 1.0 1.0
@@ -35,15 +38,19 @@ MaterialDef Voxelize {
         WorldParameters {
             WorldMatrix
             WorldNormalMatrix
+            CameraPosition
+            Time
         }
 
         Defines {
-            NUM_LIGHTS : NumLights
+            LIGHT_DATA_SIZE : LightDataSize
+            SHADOWS : LightContributionMap
+            TEMPORAL : TemporalVoxelMap
             BASECOLORMAP : BaseColorMap
+            EMISSIVE : Emissive
             EMISSIVEMAP : EmissiveMap
             SHADOWS : LightContributionMap
             DISCARD_ALPHA : AlphaDiscardThreshold
-            TEMPORAL : TemporalShading
         }
         
     }

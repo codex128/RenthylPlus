@@ -5,16 +5,30 @@
 #import "Common/ShaderLib/Lighting.glsllib"
 
 #ifdef TEMPORAL
-    #import "RenthylPlus/MatDefs/VXGI/coneTracing.glsllib"
+    uniform float g_Time;
+    uniform sampler3D m_TemporalVoxelMap;
+    uniform vec3 m_GridMin;
+    uniform vec3 m_GridMax;
+    uniform int m_GridSize;
+    uniform float m_Attenuation;
+    #define TRACING_VOXEL_MAP m_TemporalVoxelMap
+    #define GRID_MIN m_GridMin
+    #define GRID_MAX m_GridMax
+    #define GRID_SIZE m_GridSize
+    #define TRACE_DISPLACEMENT 2.0
+    #import "RenthylPlus/MatDefs/VXGI/voxelConeTracing.glsllib"
 #endif
+#ifdef SHADOWS
+    #import "RenthylPlus/ShaderLib/Shadows.glsllib"
+    uniform sampler3D m_LightContributionMap;
+#endif
+#define COMPONENTS_PER_LIGHT 12
 
 uniform vec3 g_CameraPosition;
-
-uniform vec4 m_LightData[NUM_LIGHTS];
+uniform float m_LightData[LIGHT_DATA_SIZE];
 uniform vec4 m_AmbientLight;
 
 layout(RGBA32F) uniform image3D m_VoxelMap;
-uniform int m_GridSize;
 
 varying vec3 wPosition;
 varying vec3 vPosition;
@@ -38,9 +52,10 @@ varying vec4 Color;
 #ifdef DISCARD_ALPHA
     uniform float m_AlphaDiscardThreshold;
 #endif
-#ifdef SHADOWS
-    uniform sampler2D m_LightContributionMap;
-#endif
+
+vec4 readLightData(int i) {
+    return vec4(m_LightData[i], m_LightData[i + 1], m_LightData[i + 2], m_LightData[i + 3]);
+}
 
 void main() {
     
@@ -63,67 +78,38 @@ void main() {
     vec3 viewDir = normalize(g_CameraPosition - wPosition);
     vec3 normal = normalize(wNormal);
     vec3 fZero = vec3(0.5);
-    vec4 result = vec4(diffuseColor.rgb * m_AmbientLight.rgb * m_AmbientLight.a, diffuseColor.a);
+    vec4 result = vec4(diffuseColor.rgb * m_AmbientLight.rgb, diffuseColor.a);
     float ndotv = max(dot(normal, viewDir), 0.0);
     
-    for (int i = 0, l = NUM_LIGHTS*3; i < l; i += 3) {
+    for (int i = 0; i < LIGHT_DATA_SIZE; i += COMPONENTS_PER_LIGHT) {
         #ifdef USE_LIGHT_TEXTURES
-            #ifdef TILED_LIGHTS
-                if (componentIndex == 0 || lightIndex.x < 0) {
-                    // get indices from next pixel
-                    lightIndex = texture2D(m_LightIndex, vec2(x, y) * m_LightIndexSize.yz);
-                }
-                // apply index from each component in order
-                vec2 pixel = vec2(m_LightTexInv, 0);
-                switch (componentIndex) {
-                    case 0: pixel.x *= lightIndex.x; break;
-                    case 1: pixel.x *= lightIndex.y; break;
-                    case 2: pixel.x *= lightIndex.z; break;
-                    case 3: pixel.x *= lightIndex.w; break;
-                }
-                // increment indices
-                componentIndex++;
-                if (componentIndex > 3) {
-                    componentIndex = 0;
-                    x++;
-                    if (x >= m_LightIndexSize.x) {
-                        x = 0;
-                        y++;
-                    }
-                }
-            #else
-                vec2 pixel = vec2(m_LightTexInv * i, 0);
-            #endif
+            vec2 pixel = vec2(m_LightTexInv * i, 0);
             vec4 lightColor = texture2D(m_LightTex1, pixel);
             vec4 lightData1 = texture2D(m_LightTex2, pixel);
         #else
-            vec4 lightColor = m_LightData[i];
-            vec4 lightData1 = m_LightData[i+1];
+            vec4 lightColor = readLightData(i);
+            vec4 lightData1 = readLightData(i + 4);
         #endif
+        int lightType = int(lightColor.w);
         #ifdef SHADOWS
-            // shadowIndex packed as all bits past the first two, which represent the light type
-            int shadowIndex = int(lightColor.w) >> 2;
-            // shadowIndex=0 means light does not cast shadows
-            if (shadowIndex > 0) {
-                int table = int(texture2D(m_LightContributionMap, texCoord).r);
-                // indexing is zero-based, so 1 must be subtracted from shadowIndex
-                if (((table >> (shadowIndex - 1)) & 1) == 0) {
-                    continue;
-                }
+            int shadowIndex = extractShadowIndex(lightType);
+            lightType = normalizeLightType(lightType);
+            if (!isExposedToLight(shadowIndex, m_LightContributionMap, vPosition)) {
+                continue;
             }
-        #endif             
+        #endif
         vec4 lightDir;
         vec3 lightVec;
-        lightComputeDir(wPosition, lightColor.w, lightData1, lightDir, lightVec);
+        lightComputeDir(wPosition, lightType, lightData1, lightDir, lightVec);
 
         float spotFallOff = 1.0;
         #if __VERSION__ >= 110
-        if (lightColor.w > 1.0) {
+        if (lightType == 2) {
         #endif
             #if USE_LIGHT_TEXTURES
                 spotFallOff = computeSpotFalloff(texture2D(m_LightTex3, pixel), lightVec);
             #else
-                spotFallOff = computeSpotFalloff(m_LightData[i+2], lightVec);
+                spotFallOff = computeSpotFalloff(readLightData(i + 8), lightVec);
             #endif
         #if __VERSION__ >= 110
         }
@@ -144,28 +130,39 @@ void main() {
         
     }
 
-    #if defined(EMISSIVE) || defined (EMISSIVEMAP)
+    #if defined(EMISSIVE) || defined(EMISSIVEMAP)
         #ifdef EMISSIVEMAP
-            vec3 emissive = texture2D(m_EmissiveMap, texCoord).rgb;
+            vec4 emissive = texture2D(m_EmissiveMap, texCoord).rgb;
             #ifdef EMISSIVE
                 emissive *= m_Emissive;
             #endif
         #else
-            vec3 emissive = m_Emissive.rgb;
+            vec4 emissive = m_Emissive;
         #endif
-        result.rgb += emissive * pow(emissive.a, m_EmissivePower) * m_EmissiveIntensity;
+        result.rgb += emissive.rgb * pow(emissive.a, m_EmissivePower) * m_EmissiveIntensity;
     #endif
     
-    // todo: temporal voxel cone tracing to simulate "infinite" bounces
-    
-    // debug
-    gl_FragColor = vec4(vPosition, 1.0);
-    result = vec4(255.0);
+    // temporal multibounce
+    #ifdef TEMPORAL
+        vec3 sampleDirBias = normalize(g_CameraPosition - wPosition);
+        vec3 indirect = approximatePositionIndirectVXGI(wPosition, sampleDirBias, 1.0, g_Time);
+        result.rgb += indirect * diffuseColor.rgb * m_Attenuation;
+    #endif
     
     // this will likely produce flickering
-    //ivec3 gridSize = imageSize(m_VoxelMap);
-    imageStore(m_VoxelMap, ivec3(m_GridSize * vPosition), result);
+    ivec3 voxIndex = ivec3(imageSize(m_VoxelMap) * vPosition);
+    //imageStore(m_VoxelMap, voxIndex, result);
     //imageAtomicMax(m_VoxelMap, ivec3(m_GridSize * vPosition), result);
+    
+    /*vec4 prev = imageLoad(m_VoxelMap, voxIndex);
+    prev.rgb += result.rgb;
+    prev.a += 1.0;*/
+    
+    result.a *= 1.f / 255.f;
+    vec4 prev = imageLoad(m_VoxelMap, voxIndex);
+    vec3 avg = (prev.rgb * prev.a + result.rgb * result.a) / (prev.a + result.a);
+    result = vec4(avg, result.a + result.a);
+    imageStore(m_VoxelMap, voxIndex, result);
    
 }
 

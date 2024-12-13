@@ -1,6 +1,5 @@
 
 #import "Common/ShaderLib/GLSLCompat.glsllib"
-#import "Common/ShaderLib/Instancing.glsllib"
 
 layout (triangles) in;
 layout (triangle_strip, max_vertices = 3) out;
@@ -18,25 +17,26 @@ out vec3 wNormal;
 out vec2 texCoord;
 out vec4 Color;
 
-vec4 transformToViewSpace(vec3 voxelPos) {
-    return vec4(voxelPos.xy * 2.0 - 1.0, voxelPos.z, 1.0);
+vec4 worldToProjection(vec3 world) {
+    vec3 voxelPos = (world - m_GridMin) / (m_GridMax - m_GridMin);
+    return vec4(voxelPos.xy * 2.0 - 1.0, 0.0, 1.0);
 }
 void transformVertex(vec3 n, uint i) {
     vec4 p = gl_in[i].gl_Position;
-    vec4 mPos;
+    vec3 wSwizzle;
     if (n.x > n.y && n.x > n.z) {
         // x major
-        mPos = vec4(p.y, p.z, 0.0, 1.0);
+        wSwizzle = vec3(p.y, p.z, 0.0);
     } else if (n.y > n.z) {
         // y major
-        mPos = vec4(p.x, p.z, 0.0, 1.0);
+        wSwizzle = vec3(p.x, p.z, 0.0);
     } else {
         // z major
-        mPos = vec4(p.x, p.y, 0.0, 1.0);
+        wSwizzle = vec3(p.x, p.y, 0.0);
     }
-    wPosition = TransformWorld(gl_in[i].gl_Position).xyz;
+    gl_Position = worldToProjection(wSwizzle);
+    wPosition = gl_in[i].gl_Position.xyz;
     vPosition = (wPosition - m_GridMin) / (m_GridMax - m_GridMin);
-    gl_Position = transformToViewSpace(vPosition);
     wNormal = wNorm[i];
     texCoord = uv[i];
     Color = color[i];

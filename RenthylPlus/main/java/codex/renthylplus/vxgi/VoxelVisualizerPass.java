@@ -12,6 +12,7 @@ import codex.renthyl.modules.RenderPass;
 import codex.renthyl.resources.ResourceTicket;
 import com.jme3.bounding.BoundingBox;
 import com.jme3.material.Material;
+import com.jme3.material.RenderState;
 import com.jme3.math.Vector3f;
 import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Image;
@@ -41,6 +42,7 @@ public class VoxelVisualizerPass extends RenderPass {
         color = addOutput("Color");
         depth = addOutput("Depth");
         material = new Material(frameGraph.getAssetManager(), "RenthylPlus/MatDefs/VXGI/voxelDebug.j3md");
+        material.getAdditionalRenderState().setFaceCullMode(RenderState.FaceCullMode.Off);
     }
     @Override
     protected void prepare(FGRenderContext context) {
@@ -51,7 +53,6 @@ public class VoxelVisualizerPass extends RenderPass {
     }
     @Override
     protected void execute(FGRenderContext context) {
-        
         //context.getRenderManager().setCamera(context.getViewPort().getCamera(), false);
         
         colorDef.setSize(context.getWidth(), context.getHeight());
@@ -68,7 +69,6 @@ public class VoxelVisualizerPass extends RenderPass {
         material.setTexture("VoxelMap", resources.acquire(voxels));
         material.setVector3("GridMin", min);
         material.setVector3("GridMax", max);
-        material.setInt("GridSize", 64);
         context.getRenderManager().setForcedMaterial(material);
         
         //Material m = new Material(frameGraph.getAssetManager(), "Common/MatDefs/Misc/Unshaded.j3md");

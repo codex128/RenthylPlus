@@ -67,6 +67,7 @@ public abstract class ShadowOcclusionPass <T extends Light> extends RenderPass {
     }
     @Override
     protected void execute(FGRenderContext context) {
+        RenderManager rm = context.getRenderManager();
         Camera viewCam = context.getViewPort().getCamera();
         T l = resources.acquireOrElse(light, (lightSource != null
                 ? lightSource.getGraphValue(frameGraph, context.getViewPort()) : null));
@@ -75,27 +76,37 @@ public abstract class ShadowOcclusionPass <T extends Light> extends RenderPass {
         TempVars vars = TempVars.get();
         if (l == null || !l.intersectsFrustum(viewCam, vars)) {
             vars.release();
-            resources.setUndefined(mapTickets);
+            for (int i = 0; i < numShadowMaps; i++) {
+                // setup camera
+                Camera shadowCam = getShadowCamera(context, occluderQueue, l, i);
+                rm.setCamera(shadowCam, false);
+                // always acquire shadow maps so that errors don't occur down the pipeline
+                ShadowMap map = resources.acquire(mapTickets[i]);
+                map.setLight(l);
+                map.setProjection(shadowCam.getViewProjectionMatrix());
+                map.setRange(shadowCam.getFrustumNear(), shadowCam.getFrustumFar());
+            }
             return;
         }
         vars.release();
         boolean containsAll = lightSourceInsideFrustum(viewCam, l);
-        RenderManager rm = context.getRenderManager();
         Renderer renderer = context.getRenderer();
         rm.setForcedRenderState(renderState);
         rm.setForcedMaterial(material);
         int w = shadowMapDef.getMapDef().getWidth();
         int h = shadowMapDef.getMapDef().getHeight();
         for (int i = 0; i < numShadowMaps; i++) {
-            Camera shadowCam = getShadowCamera(context, occluderQueue, l, i);
             // get the framebuffer now, so it won't be culled
             FrameBuffer fb = getFrameBuffer(i, w, h, 1);
+            // setup camera
+            Camera shadowCam = getShadowCamera(context, occluderQueue, l, i);
+            rm.setCamera(shadowCam, false);
+            // always acquire shadow maps so that errors don't occur down the pipeline
+            ShadowMap map = resources.acquire(mapTickets[i]);
+            map.setLight(l);
+            map.setProjection(shadowCam.getViewProjectionMatrix());
+            map.setRange(shadowCam.getFrustumNear(), shadowCam.getFrustumFar());
             if (containsAll || frustumIntersect(viewCam, shadowCam)) {
-                rm.setCamera(shadowCam, false);
-                ShadowMap map = resources.acquire(mapTickets[i]);
-                map.setLight(l);
-                map.setProjection(shadowCam.getViewProjectionMatrix());
-                map.setRange(shadowCam.getFrustumNear(), shadowCam.getFrustumFar());
                 FrameBuffer.RenderBuffer current = fb.getDepthTarget();
                 if (current == null || current.getTexture() != map.getMap()) {
                     fb.setDepthTarget(FrameBuffer.FrameBufferTarget.newTarget(map.getMap()));
@@ -104,8 +115,6 @@ public abstract class ShadowOcclusionPass <T extends Light> extends RenderPass {
                 renderer.setFrameBuffer(fb);
                 renderer.clearBuffers(false, true, false);
                 context.renderGeometry(occluderQueue, shadowCam, null);
-            } else {
-                resources.setUndefined(mapTickets[i]);
             }
         }
     }
