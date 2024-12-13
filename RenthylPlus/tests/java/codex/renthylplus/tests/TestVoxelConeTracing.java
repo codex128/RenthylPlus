@@ -197,7 +197,7 @@ public class TestVoxelConeTracing extends SimpleApplication {
         
         enqueue.setFrustumCulling(false);
         voxelEnv.setBounds(GraphSource.value(new BoundingBox(Vector3f.ZERO, 40, 40, 40)));
-        voxelEnv.setGridSize(GraphSource.value(256));
+        voxelEnv.setGridSize(GraphSource.value(64));
         new IndexSwitch(inputManager, new KeyTrigger(KeyInput.KEY_SPACE)).setJunction(outJunct);
         spotShadows.setLightSource(GraphSource.value(spot));
         
