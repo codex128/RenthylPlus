@@ -6,19 +6,26 @@ package codex.renthylplus.effects;
 
 import codex.renthyl.modules.RenderContainer;
 import codex.renthyl.modules.RenderModule;
+import codex.renthyl.resources.tickets.ResourceTicket;
+import codex.renthyl.resources.tickets.TicketSelector;
+import com.jme3.texture.Texture2D;
 
 /**
  * 
  * @author codex
  * @param <R>
  */
-public class FilterStack <R extends RenderModule> extends RenderContainer<R> {
+public class FilterChain <R extends RenderModule> extends RenderContainer<R> {
     
-    public FilterStack() {
+    private static final TicketSelector color = TicketSelector.name("Color");
+    private static final TicketSelector depth = TicketSelector.name("Depth");
+    private static final TicketSelector result = TicketSelector.name("Result");
+    
+    public FilterChain() {
         super();
         addTickets();
     }
-    public FilterStack(String name) {
+    public FilterChain(String name) {
         super(name);
         addTickets();
     }
@@ -27,6 +34,7 @@ public class FilterStack <R extends RenderModule> extends RenderContainer<R> {
         addInput("Color");
         addInput("Depth");
         addOutput("Result");
+        getMainOutputGroup().makeInput(getMainInputGroup(), color, result);
     }
     
     @Override
@@ -34,18 +42,18 @@ public class FilterStack <R extends RenderModule> extends RenderContainer<R> {
         super.add(module, index);
         if (index > 0) {
             R prev = queue.get(index - 1);
-            module.makeInput(prev, "Result", "Color");
+            module.getMainInputGroup().makeInput(prev.getMainOutputGroup(), result, color);
         } else {
-            makeInternalInput("Color", "Color", module);
+            makeInternalInput(color, color, module);
         }
         if (index < queue.size()-1) {
             R next = queue.get(index + 1);
-            next.makeInput(module, "Result", "Color");
+            next.getMainInputGroup().makeInput(module.getMainOutputGroup(), result, color);
         } else {
-            makeInternalOutput(module, "Result", "Result");
+            makeInternalOutput(module, result, result);
         }
-        if (module.getInput("Depth") != null) {
-            makeInternalInput("Depth", "Depth", module);
+        if (module.getMainInputGroup().select(depth) != null) {
+            makeInternalInput(depth, depth, module);
         }
         return module;
     }
@@ -70,11 +78,13 @@ public class FilterStack <R extends RenderModule> extends RenderContainer<R> {
         R next = (i < queue.size() ? queue.get(i + 1) : null);
         R removed = super.remove(i);
         if (prev != null && next == null) {
-            makeInternalOutput(prev, "Result", "Result");
+            makeInternalOutput(prev, result, result);
         } else if (prev == null && next != null) {
-            makeInternalInput("Color", "Color", next);
+            makeInternalInput(color, color, next);
         } else if (prev != null && next != null) {
-            next.makeInput(prev, "Result", "Color");
+            next.getMainInputGroup().makeInput(prev.getMainOutputGroup(), result, color);
+        } else {
+            getMainOutputGroup().makeInput(getMainInputGroup(), color, result);
         }
         return removed;
     }

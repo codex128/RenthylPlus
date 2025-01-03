@@ -4,6 +4,7 @@
  */
 package codex.renthylplus.tests;
 
+import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.Renthyl;
 import codex.renthyl.modules.OutputPass;
@@ -13,7 +14,6 @@ import codex.renthyl.modules.geometry.QueueMergePass;
 import codex.renthyl.modules.geometry.SceneEnqueuePass;
 import codex.renthyl.util.GeometryRenderHandler;
 import com.jme3.app.SimpleApplication;
-import com.jme3.renderer.RenderManager;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Spatial;
 
@@ -34,7 +34,7 @@ public class TestOcclusionCulling extends SimpleApplication {
         Renthyl.initialize(this);
         
         FrameGraph fg = new FrameGraph(assetManager);
-        SceneEnqueuePass enqueue = fg.add(new SceneEnqueuePass(true, true));
+        SceneEnqueuePass enqueue = fg.add(SceneEnqueuePass.withLegacyQueues());
         QueueMergePass merge = fg.add(new QueueMergePass(5));
         GeometryPass geometry = fg.add(new GeometryPass());
         OutputPass out = fg.add(new OutputPass());
@@ -64,12 +64,10 @@ public class TestOcclusionCulling extends SimpleApplication {
         }
         
         @Override
-        public boolean renderGeometry(RenderManager rm, Geometry g) {
+        public void renderGeometry(FGRenderContext context, Geometry g) {
             if (visible == isVisible(g)) {
-                rm.renderGeometry(g);
-                return true;
+                context.getRenderManager().renderGeometry(g);
             }
-            return false;
         }
         
     }

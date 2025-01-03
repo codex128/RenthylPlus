@@ -10,8 +10,9 @@ import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.client.GraphSource;
 import codex.renthyl.definitions.TextureDef;
+import codex.renthyl.draw.RenderMode;
 import codex.renthyl.modules.RenderPass;
-import codex.renthyl.resources.ResourceTicket;
+import codex.renthyl.resources.tickets.ResourceTicket;
 import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector4f;
@@ -19,7 +20,6 @@ import com.jme3.shader.Shader;
 import com.jme3.shader.VarType;
 import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Texture2D;
-import java.util.Objects;
 
 /**
  *
@@ -71,11 +71,12 @@ public class ColorOverlayPass extends RenderPass {
         int h = inTex.getImage().getHeight();
         resultDef.setSize(w, h);
         resultDef.setFormat(inTex.getImage().getFormat());
-        context.resizeCamera(w, h, false, false, false);
+        context.registerMode(RenderMode.cameraSize(w, h));
         FrameBuffer fb = getFrameBuffer(w, h, 1);
         resources.acquireColorTarget(fb, result);
         context.getRenderer().setFrameBuffer(fb);
-        context.getRenderer().clearBuffers(true, true, true);
+        context.registerMode(RenderMode.frameBuffer(fb));
+        context.clearBuffers();
         material.setTexture("Texture", inTex);
         ColorRGBA overlay = GraphSource.get(colorSource, null, frameGraph, context.getViewPort());
         if (overlay == null) {

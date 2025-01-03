@@ -7,7 +7,7 @@ package codex.renthylplus.vxgi;
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.modules.RenderPass;
-import codex.renthyl.resources.ResourceTicket;
+import codex.renthyl.resources.tickets.ResourceTicket;
 import com.jme3.light.Light;
 import com.jme3.scene.SceneGraphIterator;
 import com.jme3.scene.Spatial;

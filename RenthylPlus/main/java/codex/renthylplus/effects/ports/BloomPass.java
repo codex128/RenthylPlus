@@ -35,7 +35,9 @@ import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.GeometryQueue;
 import codex.renthyl.definitions.TextureDef;
-import codex.renthyl.resources.ResourceTicket;
+import codex.renthyl.draw.RenderMode;
+import codex.renthyl.resources.tickets.ResourceTicket;
+import codex.renthyl.util.GeometryRenderHandler;
 import codex.renthylplus.effects.JmeFilterPass;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
@@ -159,13 +161,14 @@ public class BloomPass extends JmeFilterPass {
     protected void prepare(FGRenderContext context) {
         super.prepare(context);
         boolean scene = glowMode == BloomFilter.GlowMode.Scene;
-        geometry.setOverrideWorldIndex(scene);
-        objectGlow.setOverrideWorldIndex(scene);
-        referenceOptional(geometry, objectGlow);
-        if (!scene && ResourceTicket.validate(geometry)) {
-            declareTemporary(colorDef, geometryResult);
-            declareTemporary(depthDef, geometryDepth);
+        if (!scene) {
+            referenceOptional(geometry, objectGlow);
+            if (ResourceTicket.validate(geometry)) {
+                declareTemporary(colorDef, geometryResult);
+                declareTemporary(depthDef, geometryDepth);
+            }
         }
+        
     }
     @Override
     protected void execute(FGRenderContext context) {
@@ -179,17 +182,17 @@ public class BloomPass extends JmeFilterPass {
                 // render glow geometry
                 colorDef.setSize(screenWidth, screenHeight);
                 depthDef.setSize(colorDef);
-                context.resizeCamera(screenWidth, screenHeight, false, false, false);
+                context.registerMode(RenderMode.cameraSize(screenWidth, screenHeight));
                 FrameBuffer fb = getFrameBuffer("objectGlowRender", screenWidth, screenHeight, 1);
                 glowMap = resources.acquireColorTarget(fb, geometryResult);
                 resources.acquireDepthTarget(fb, geometryDepth);
-                context.getRenderer().setFrameBuffer(fb);
-                context.getRenderer().clearBuffers(true, true, true);
-                context.getRenderer().setBackgroundColor(ColorRGBA.BlackNoAlpha);
-                context.getRenderManager().setForcedTechnique("Glow");
-                context.renderGeometry(queue, null, null);
+                context.registerMode(RenderMode.frameBuffer(fb));
+                context.clearBuffers();
+                context.registerMode(RenderMode.background(ColorRGBA.BlackNoAlpha));
+                context.registerMode(RenderMode.forcedTechnique("Glow"));
+                queue.render(context, GeometryRenderHandler.DEFAULT);
+                context.popActiveModes();
                 resources.release(geometryResult, geometryDepth);
-                context.popRenderSettings();
             } else {
                 // use existing glow map
                 glowMap = resources.acquire(objectGlow);

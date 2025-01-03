@@ -7,16 +7,18 @@ package codex.renthylplus.effects;
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.definitions.TextureDef;
+import codex.renthyl.draw.RenderMode;
 import codex.renthyl.modules.RenderPass;
-import codex.renthyl.resources.ResourceTicket;
+import codex.renthyl.resources.tickets.ResourceTicket;
+import codex.renthyl.resources.tickets.TicketSelector;
+import com.jme3.export.InputCapsule;
+import com.jme3.export.OutputCapsule;
 import com.jme3.material.Material;
-import com.jme3.math.Vector3f;
 import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Image;
 import com.jme3.texture.Texture2D;
+import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Objects;
 
 /**
  *
@@ -26,7 +28,8 @@ public abstract class JmeFilterPass extends RenderPass {
 
     protected ResourceTicket<Texture2D> sceneColor, sceneDepth;
     protected ResourceTicket<Texture2D> result;
-    protected final ArrayList<Subpass> subpasses = new ArrayList<>();
+    private final ArrayList<Subpass> subpasses = new ArrayList<>();
+    private boolean enabled = true;
     
     @Override
     protected void initialize(FrameGraph frameGraph) {
@@ -37,34 +40,42 @@ public abstract class JmeFilterPass extends RenderPass {
     }
     @Override
     protected void prepare(FGRenderContext context) {
-        boolean requireColor = false;
-        boolean requireDepth = false;
-        for (int i = 0; i < subpasses.size(); i++) {
-            Subpass p = subpasses.get(i);
-            if (i < subpasses.size()-1) {
-                declareTemporary(p.def, p.ticket);
-                reserve(p.ticket);
+        if (enabled) {
+            result.setSource(null);
+            boolean requireColor = false;
+            boolean requireDepth = false;
+            for (int i = 0; i < subpasses.size(); i++) {
+                Subpass p = subpasses.get(i);
+                if (i < subpasses.size()-1) {
+                    declareTemporary(p.def, p.ticket);
+                    reserve(p.ticket);
+                }
+                if (p.useColor) {
+                    requireColor = true;
+                }
+                if (p.useDepth) {
+                    requireDepth = true;
+                }
             }
-            if (p.useColor) {
-                requireColor = true;
+            declare(subpasses.get(subpasses.size()-1).def, result);
+            reserve(result);
+            if (requireColor) {
+                reference(sceneColor);
             }
-            if (p.useDepth) {
-                requireDepth = true;
+            if (requireDepth) {
+                reference(sceneDepth);
             }
-        }
-        declare(subpasses.get(subpasses.size()-1).def, result);
-        reserve(result);
-        sceneColor.setOverrideWorldIndex(!requireColor);
-        sceneDepth.setOverrideWorldIndex(!requireDepth);
-        if (requireColor) {
-            reference(sceneColor);
-        }
-        if (requireDepth) {
-            reference(sceneDepth);
+        } else if (result.getSource() != sceneColor) {
+            // this is the API safe method, although it is slower than directly assigning the result's source
+            getMainOutputGroup().makeInput(getMainInputGroup(), TicketSelector.is(sceneColor), TicketSelector.is(result));
         }
     }
     @Override
     protected void execute(FGRenderContext context) {
+        
+        if (!enabled) {
+            return;
+        }
         
         // acquire input textures
         Texture2D inColor = resources.acquireOrElse(sceneColor, null);
@@ -84,6 +95,7 @@ public abstract class JmeFilterPass extends RenderPass {
         // render each subpass in order
         for (int i = 0; i < subpasses.size(); i++) {
             
+            // configure default size and format
             Subpass pass = subpasses.get(i);
             pass.def.setSize(w, h);
             if (outFormat != null && i == subpasses.size()-1) {
@@ -92,13 +104,13 @@ public abstract class JmeFilterPass extends RenderPass {
             pass.beforeAcquire(context);
             
             // resize camera to match framebuffer
-            context.resizeCamera(pass.def.getWidth(), pass.def.getHeight(), false, false, false);
+            context.registerMode(RenderMode.cameraSize(pass.def.getWidth(), pass.def.getHeight()));
             
             // setup framebuffer
             FrameBuffer fb = getFrameBuffer(i, pass.def.getWidth(), pass.def.getHeight(), pass.def.getSamples());
             pass.targetTexture = resources.acquireColorTarget(fb, (i < subpasses.size()-1 ? pass.ticket : result));
-            context.getRenderer().setFrameBuffer(fb);
-            context.getRenderer().clearBuffers(true, false, false);
+            context.registerMode(RenderMode.frameBuffer(fb));
+            context.clearBuffers(true, false, false);
             
             // set color parameters
             if (pass.useColor) {
@@ -131,6 +143,7 @@ public abstract class JmeFilterPass extends RenderPass {
             // render
             pass.beforeRender(context);
             context.renderFullscreen(pass.material);
+            pass.afterRender(context);
             
         }
         
@@ -146,11 +159,37 @@ public abstract class JmeFilterPass extends RenderPass {
     protected void cleanup(FrameGraph frameGraph) {
         subpasses.clear();
     }
+    @Override
+    protected void write(OutputCapsule out) throws IOException {
+        super.write(out);
+        out.write(enabled, "enabled", true);
+    }
+    @Override
+    protected void read(InputCapsule in) throws IOException {
+        super.read(in);
+        setEnabled(in.readBoolean("enabled", true));
+    }
     
     protected abstract void init(FrameGraph frameGraph);
+    
     protected <T extends Subpass> T add(T pass) {
         subpasses.add(pass);
         return pass;
+    }
+    protected void clearSubpasses() {
+        subpasses.clear();
+    }
+    
+    public void setEnabled(boolean enabled) {
+        if (this.enabled != enabled) {
+            this.enabled = enabled;
+            if (frameGraph != null) {
+                frameGraph.setLayoutUpdateNeeded();
+            }
+        }
+    }
+    public boolean isEnabled() {
+        return enabled;
     }
     
     public class Subpass {

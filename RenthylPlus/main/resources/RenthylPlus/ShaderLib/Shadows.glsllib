@@ -40,12 +40,12 @@ bool isExposedToLight(int shadowIndex, sampler3D contributionMap, vec3 texCoord)
 // by comparing the position's lightspace depth against the shadow map.
 bool isExposedToLight(vec3 worldPos, sampler2D shadowMap, mat4 lightViewProjectionMatrix, vec2 lightRangeInverse, bool outOfBoundsExposed) {
     vec4 lightViewPos = lightViewProjectionMatrix * vec4(worldPos, 1.0);
-    vec2 lightUv = ((lightViewPos.xy / lightViewPos.w) + 1.0) * 0.5;
-    float depth = lightViewPos.z;
+    vec3 lightUv = ((lightViewPos.xyz / lightViewPos.w) + 1.0) * 0.5;
+    float depth = lightUv.z;
     if (depth >= 0.0 && lightUv.x >= 0.0 && lightUv.x <= 1.0 && lightUv.y >= 0.0 && lightUv.y <= 1.0) {
-        float shadow = textureLod(shadowMap, lightUv, 0.0).r;
-        depth = linearizeDepth(depth, lightRangeInverse);
-        return depth <= shadow;
+        float shadow = textureLod(shadowMap, lightUv.xy, 0.0).r;
+        //depth = linearizeDepth(depth, lightRangeInverse);
+        return depth - 0.001 <= shadow;
     }
     return outOfBoundsExposed;
 }

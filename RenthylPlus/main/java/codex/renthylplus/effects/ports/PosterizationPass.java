@@ -82,7 +82,7 @@ public class PosterizationPass extends JmeFilterPass {
         material.setInt("NumColors", numColors);
         material.setFloat("Gamma", gamma);
         material.setFloat("Strength", strength);
-        subpasses.add(new Subpass(material));
+        add(new Subpass(material));
     }
 
     /**

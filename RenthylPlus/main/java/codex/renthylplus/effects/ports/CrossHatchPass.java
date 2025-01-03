@@ -98,7 +98,7 @@ public class CrossHatchPass extends JmeFilterPass {
         material.setFloat("LineThickness", lineThickness);
         material.setFloat("LineDistance", lineDistance);
         
-        subpasses.add(new Subpass(material));
+        add(new Subpass(material));
         
     }
 

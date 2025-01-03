@@ -80,7 +80,7 @@ public class SoftBloomPass extends JmeFilterPass {
     
     private void updateFilterChain(int w, int h) {
         
-        subpasses.clear();
+        clearSubpasses();
         downsamplingPasses = new Subpass[numSamplingPasses];
         upsamplingPasses = new Subpass[numSamplingPasses];
         

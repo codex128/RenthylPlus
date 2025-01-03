@@ -10,7 +10,7 @@ void main() {
         discard;
     }
     
-    gl_FragColor = textureLod(m_VoxelMap, vPosition, 0.0);
+    gl_FragColor = texelFetch(m_VoxelMap, ivec3(textureSize(m_VoxelMap, 0) * vPosition), 0);
     
 }
 

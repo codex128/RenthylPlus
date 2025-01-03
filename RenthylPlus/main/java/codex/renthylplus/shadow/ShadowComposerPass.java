@@ -8,7 +8,8 @@ import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.modules.RenderPass;
-import codex.renthyl.resources.ResourceTicket;
+import codex.renthyl.resources.tickets.ArbitraryTicketList;
+import codex.renthyl.resources.tickets.ResourceTicket;
 import com.jme3.light.Light;
 import com.jme3.material.Material;
 import com.jme3.material.RenderState;
@@ -29,6 +30,7 @@ public class ShadowComposerPass extends RenderPass {
     private ResourceTicket<Texture2D> recieverDepth;
     private ResourceTicket<Texture2D> lightContribution;
     private ResourceTicket<Light[]> lightShadowIndices;
+    private ArbitraryTicketList<ShadowMap> shadowMaps;
     private final TextureDef<Texture2D> contributionDef = TextureDef.texture2D();
     private final RenderState renderState = new RenderState();
     private Light[] indexMap;
@@ -38,7 +40,7 @@ public class ShadowComposerPass extends RenderPass {
     @Override
     protected void initialize(FrameGraph frameGraph) {
         recieverDepth = addInput("ReceiverDepth");
-        addInputList("ShadowMaps");
+        shadowMaps = addInputGroup(new ArbitraryTicketList<>("ShadowMaps"));
         lightContribution = addOutput("LightContribution");
         lightShadowIndices = addOutput("LightShadowIndices");
         contributionDef.setFormat(Image.Format.R32F);
@@ -55,7 +57,7 @@ public class ShadowComposerPass extends RenderPass {
         declarePrimitive(lightShadowIndices);
         reserve(lightContribution);
         reference(recieverDepth);
-        referenceOptional(getGroupArray("ShadowMaps"));
+        referenceOptional(shadowMaps);
     }
     @Override
     protected void execute(FGRenderContext context) {
@@ -75,7 +77,7 @@ public class ShadowComposerPass extends RenderPass {
         
         // fullscreen render for each shadow map
         int nextIndex = 0;
-        ShadowMap[] maps = acquireArrayOrElse("ShadowMaps", n -> new ShadowMap[n], null);
+        ShadowMap[] maps = acquireArrayOrElse(shadowMaps, n -> new ShadowMap[n], null);
         indexMap = new Light[Math.min(maps.length, MAX_SHADOW_LIGHTS)];
         for (ShadowMap m : maps) {
             if (m == null) {

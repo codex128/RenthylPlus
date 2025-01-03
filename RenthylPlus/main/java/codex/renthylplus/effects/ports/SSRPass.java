@@ -34,7 +34,7 @@ package codex.renthylplus.effects.ports;
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.definitions.TextureDef;
-import codex.renthyl.resources.ResourceTicket;
+import codex.renthyl.resources.tickets.ResourceTicket;
 import codex.renthylplus.effects.JmeFilterPass;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
@@ -104,7 +104,7 @@ public class SSRPass extends JmeFilterPass {
     
     private void updateFilterChain() {
         
-        subpasses.clear();
+        clearSubpasses();
         Point size = new Point();
         
         Subpass ssrPass = add(new Subpass(ssrMat, true, true) {

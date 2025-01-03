@@ -8,10 +8,11 @@ import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.GeometryQueue;
 import codex.renthyl.modules.RenderPass;
-import codex.renthyl.resources.ResourceTicket;
+import codex.renthyl.resources.tickets.ResourceTicket;
 import codex.renthyl.util.SpatialWorldParam;
 import com.jme3.renderer.queue.OpaqueComparator;
 import com.jme3.renderer.queue.RenderQueue;
+import com.jme3.renderer.queue.RenderQueue.ShadowMode;
 import com.jme3.scene.Geometry;
 
 /**
@@ -39,15 +40,16 @@ public class ShadowQueuePass extends RenderPass {
     protected void execute(FGRenderContext context) {
         GeometryQueue source = resources.acquire(geometry);
         int numGeoms = source.getNumGeometries();
-        if (occluderQueue == null || occluderQueue.getAllocatedSpace() < numGeoms) {
+        if (occluderQueue == null) {
             occluderQueue = new GeometryQueue(new OpaqueComparator(), numGeoms);
         }
-        if (receiverQueue == null || receiverQueue.getAllocatedSpace() < numGeoms) {
+        if (receiverQueue == null) {
             receiverQueue = new GeometryQueue(new OpaqueComparator(), numGeoms);
         }
         for (Geometry g : source) {
-            RenderQueue.ShadowMode mode = SpatialWorldParam.ShadowModeParam.getWorldValue(g);
-            if (mode != null) {
+            ShadowMode mode = SpatialWorldParam.getWorldParameter(
+                    g, ShadowMode.Inherit, ShadowMode.Off, s -> s.getLocalShadowMode());
+            if (mode != null && mode != ShadowMode.Off) {
                 boolean all = mode == RenderQueue.ShadowMode.CastAndReceive;
                 if (all || mode == RenderQueue.ShadowMode.Cast) {
                     occluderQueue.add(g);

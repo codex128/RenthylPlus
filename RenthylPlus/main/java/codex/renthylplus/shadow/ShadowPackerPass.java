@@ -7,7 +7,7 @@ package codex.renthylplus.shadow;
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.modules.RenderPass;
-import codex.renthyl.resources.ResourceTicket;
+import codex.renthyl.resources.tickets.ResourceTicket;
 import com.jme3.math.Matrix4f;
 import com.jme3.texture.TextureArray;
 

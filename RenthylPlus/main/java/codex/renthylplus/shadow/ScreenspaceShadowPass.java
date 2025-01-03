@@ -8,8 +8,9 @@ import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.modules.RenderPass;
-import codex.renthyl.resources.ResourceTicket;
 import codex.boost.material.ImmediateMatDef;
+import codex.renthyl.resources.tickets.ArbitraryTicketList;
+import codex.renthyl.resources.tickets.ResourceTicket;
 import com.jme3.material.Material;
 import com.jme3.shader.VarType;
 import com.jme3.texture.Texture;
@@ -26,6 +27,7 @@ public class ScreenspaceShadowPass extends RenderPass {
     
     private ResourceTicket<Texture2D> color, depth;
     private ResourceTicket<Texture2D> result;
+    private ArbitraryTicketList<ShadowMap> shadowMaps;
     private final TextureDef<Texture2D> resultDef = TextureDef.texture2D();
     private Material material;
     
@@ -33,7 +35,7 @@ public class ScreenspaceShadowPass extends RenderPass {
     protected void initialize(FrameGraph frameGraph) {
         color = addInput("RecieverColor");
         depth = addInput("RecieverDepth");
-        addInputList("ShadowMaps");
+        shadowMaps = addInputGroup(new ArbitraryTicketList<>("ShadowMaps"));
         result = addOutput("Result");
         resultDef.setMinFilter(Texture.MinFilter.BilinearNoMipMaps);
         resultDef.setMagFilter(Texture.MagFilter.Bilinear);
@@ -56,7 +58,7 @@ public class ScreenspaceShadowPass extends RenderPass {
     protected void prepare(FGRenderContext context) {
         declare(resultDef, result);
         reference(color, depth);
-        referenceOptional(getGroupArray("ShadowMaps"));
+        referenceOptional(shadowMaps);
     }
     @Override
     protected void execute(FGRenderContext context) {}

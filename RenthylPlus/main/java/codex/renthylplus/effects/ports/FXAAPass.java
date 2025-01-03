@@ -59,7 +59,7 @@ public class FXAAPass extends JmeFilterPass {
         material.setFloat("VxOffset", vxOffset);
         material.setFloat("SpanMax", spanMax);
         material.setFloat("ReduceMul", reduceMul);
-        subpasses.add(new Subpass(material));
+        add(new Subpass(material));
     }
 
     public void setSpanMax(float spanMax) {

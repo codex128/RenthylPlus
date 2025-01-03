@@ -9,18 +9,21 @@ import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.GeometryQueue;
 import codex.renthyl.definitions.TextureDef;
+import codex.renthyl.draw.RenderMode;
 import codex.renthyl.modules.RenderPass;
-import codex.renthyl.resources.ResourceTicket;
+import codex.renthyl.resources.tickets.DefinedTicketList;
+import codex.renthyl.resources.tickets.ResourceTicket;
+import codex.renthyl.resources.tickets.TicketSelector;
 import codex.renthyl.util.GeometryRenderHandler;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
 import com.jme3.math.Vector2f;
-import com.jme3.renderer.RenderManager;
 import com.jme3.scene.Geometry;
 import com.jme3.shader.VarType;
 import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Image;
 import com.jme3.texture.Texture2D;
+import java.util.ArrayList;
 
 /**
  * Renders direct lighting for the scene and constructs geometry
@@ -30,7 +33,7 @@ import com.jme3.texture.Texture2D;
  */
 public class DirectLightingPass extends RenderPass implements GeometryRenderHandler {
     
-    public static final String TECHNIQUE = "VXGI_DirectLighting";
+    public static final RenderMode<String> TECHNIQUE = RenderMode.forcedTechnique("VXGI_DirectLighting");
     private static final MaterialAdapter adapter = new MaterialAdapter();
     
     static {
@@ -42,16 +45,10 @@ public class DirectLightingPass extends RenderPass implements GeometryRenderHand
     private ResourceTicket<Texture2D> lightContribution;
     private ResourceTicket<Texture2D> color;
     private ResourceTicket<Texture2D> depth;
-    private ResourceTicket<Texture2D> diffuse;
-    private ResourceTicket<Texture2D> position;
-    private ResourceTicket<Texture2D> normals;
-    private ResourceTicket<Texture2D> material;
+    private DefinedTicketList<Texture2D, TextureDef<Texture2D>> materials;
     private final TextureDef<Texture2D> colorDef = TextureDef.texture2D(Image.Format.RGBA16F);
     private final TextureDef<Texture2D> depthDef = TextureDef.texture2D(Image.Format.Depth16);
-    private final TextureDef<Texture2D> diffuseDef = TextureDef.texture2D(Image.Format.RGB16F);
-    private final TextureDef<Texture2D> positionDef = TextureDef.texture2D(Image.Format.RGB16F);
-    private final TextureDef<Texture2D> normalDef = TextureDef.texture2D(Image.Format.RGBA16F);
-    private final TextureDef<Texture2D> materialDef = TextureDef.texture2D(Image.Format.RGBA32F);
+    private final ArrayList<ResourceTicket<Texture2D>> colorTargets = new ArrayList<>();
     private final Vector2f screenSize = new Vector2f();
     private AssetManager assetManager;
     
@@ -62,21 +59,21 @@ public class DirectLightingPass extends RenderPass implements GeometryRenderHand
         lightContribution = addInput("LightContribution");
         color = addOutput("Color");
         depth = addOutput("Depth");
-        diffuse = addOutput("Diffuse");
-        position = addOutput("Position");
-        normals = addOutput("Normals");
-        material = addOutput("Material");
+        materials = addOutputGroup(new DefinedTicketList<>("Material"));
+        materials.add("Diffuse", TextureDef.texture2D(Image.Format.RGBA16F));
+        materials.add("Position", TextureDef.texture2D(Image.Format.RGBA16F));
+        materials.add("Normal", TextureDef.texture2D(Image.Format.RGBA16F));
+        materials.add("Material", TextureDef.texture2D(Image.Format.RGBA32F));
         assetManager = frameGraph.getAssetManager();
     }
     @Override
     protected void prepare(FGRenderContext context) {
+        // TODO: group gbuffers into one ticket group
         declare(colorDef, color);
         declare(depthDef, depth);
-        declare(diffuseDef, diffuse);
-        declare(positionDef, position);
-        declare(normalDef, normals);
-        declare(materialDef, material);
-        reserve(color, diffuse, depth, material);
+        materials.declareAll(resources, this);
+        reserve(color, depth);
+        reserve(materials);
         reference(geometry, lights);
         referenceOptional(lightContribution);
     }
@@ -85,36 +82,37 @@ public class DirectLightingPass extends RenderPass implements GeometryRenderHand
         screenSize.set(context.getWidth(), context.getHeight());
         colorDef.setSize(context.getWidth(), context.getHeight());
         depthDef.setSize(colorDef);
-        diffuseDef.setSize(colorDef);
-        positionDef.setSize(colorDef);
-        normalDef.setSize(colorDef);
-        materialDef.setSize(colorDef);
+        for (TextureDef<Texture2D> d : materials.getDefs()) {
+            d.setSize(colorDef);
+        }
         FrameBuffer fb = getFrameBuffer(context, 1);
         fb.setMultiTarget(true);
-        resources.acquireColorTargets(fb, color, diffuse, position, normals, material);
+        colorTargets.add(color);
+        resources.acquireColorTargets(fb, materials.select(TicketSelector.All, colorTargets));
         resources.acquireDepthTarget(fb, depth);
-        context.getRenderer().setFrameBuffer(fb);
-        context.getRenderer().clearBuffers(true, true, true);
-        context.getRenderManager().setForcedTechnique(TECHNIQUE);
-        context.renderGeometry(resources.acquire(geometry), null, this);
+        context.registerMode(RenderMode.frameBuffer(fb));
+        context.clearBuffers();
+        context.registerMode(TECHNIQUE);
+        resources.acquire(geometry).render(context, this);
     }
     @Override
-    protected void reset(FGRenderContext context) {}
+    protected void reset(FGRenderContext context) {
+        colorTargets.clear();
+    }
     @Override
     protected void cleanup(FrameGraph frameGraph) {}
     @Override
-    public boolean renderGeometry(RenderManager rm, Geometry g) {
+    public void renderGeometry(FGRenderContext context, Geometry g) {
         Material m = g.getMaterial();
-        if (!adapter.adaptMaterial(assetManager, m, TECHNIQUE)) {
-            return false;
+        if (!adapter.adaptMaterial(assetManager, m, TECHNIQUE.getTargetValue())) {
+            return;
         }
         float[] lightData = resources.acquire(lights);
         m.setInt("VXGI_LightDataSize", lightData.length);
         m.setParam("VXGI_LightData", VarType.FloatArray, lightData);
         m.setTexture("VXGI_LightContributionMap", resources.acquireOrElse(lightContribution, null));
         m.setVector2("VXGI_ScreenSize", screenSize);
-        rm.renderGeometry(g);
-        return true;
+        context.getRenderManager().renderGeometry(g);
     }
     
 }

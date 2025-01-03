@@ -32,9 +32,12 @@ import codex.boost.material.MaterialAdapter;
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.GeometryQueue;
-import codex.renthyl.resources.ResourceTicket;
 import codex.renthyl.definitions.TextureDef;
+import codex.renthyl.draw.RenderMode;
 import codex.renthyl.modules.RenderPass;
+import codex.renthyl.resources.tickets.DefinedTicketArray;
+import codex.renthyl.resources.tickets.ResourceTicket;
+import codex.renthyl.resources.tickets.TicketSelector;
 import codex.renthyl.util.GeometryRenderHandler;
 import com.jme3.asset.AssetManager;
 import com.jme3.material.Material;
@@ -43,8 +46,8 @@ import com.jme3.scene.Geometry;
 import com.jme3.texture.FrameBuffer;
 import com.jme3.texture.Image;
 import com.jme3.texture.Texture2D;
-import com.jme3.renderer.RenderManager;
 import com.jme3.renderer.queue.NullComparator;
+import java.util.LinkedList;
 
 /**
  * Renders information about a queue of geometries to a set of textures.
@@ -80,30 +83,30 @@ public class DeferredGBufferPass extends RenderPass implements GeometryRenderHan
     
     private AssetManager assetManager;
     private ResourceTicket<GeometryQueue> geometry;
-    private ResourceTicket<Texture2D>[] gbuffers;
+    private DefinedTicketArray<Texture2D, TextureDef<Texture2D>> gbuffers;
     private ResourceTicket<GeometryQueue> skipped;
-    private final TextureDef<Texture2D>[] texDefs = new TextureDef[5];
     private final GeometryQueue skipQueue = new GeometryQueue(new NullComparator());
     
     @Override
     protected void initialize(FrameGraph frameGraph) {
         geometry = addInput("Geometry");
-        gbuffers = addOutputGroup("GBufferData", 5);
+        gbuffers = addOutputGroup(new DefinedTicketArray<>("GBufferData",
+                TextureDef.texture2D(Image.Format.RGBA16F),
+                TextureDef.texture2D(Image.Format.RGBA16F),
+                TextureDef.texture2D(Image.Format.RGBA16F),
+                TextureDef.texture2D(Image.Format.RGBA32F),
+                TextureDef.texture2D(Image.Format.Depth)));
         skipped = addOutput("SkippedGeometry");
-        texDefs[0] = TextureDef.texture2D(Image.Format.RGBA16F);
-        texDefs[1] = TextureDef.texture2D(Image.Format.RGBA16F);
-        texDefs[2] = TextureDef.texture2D(Image.Format.RGBA16F);
-        texDefs[3] = TextureDef.texture2D(Image.Format.RGBA32F);
-        texDefs[4] = TextureDef.texture2D(Image.Format.Depth);
         this.assetManager = frameGraph.getAssetManager();
     }
     @Override
     protected void prepare(FGRenderContext context) {
         int w = context.getWidth();
         int h = context.getHeight();
-        for (int i = 0; i < gbuffers.length; i++) {
-            texDefs[i].setSize(w, h);
-            declare(texDefs[i], gbuffers[i]);
+        // TODO: make group implementation to handle definitions as well
+        for (int i = 0; i < gbuffers.size(); i++) {
+            gbuffers.getDef(i).setSize(w, h);
+            declare(gbuffers.getDef(i), gbuffers.get(i));
         }
         declare(null, skipped);
         reserve(gbuffers);
@@ -113,13 +116,13 @@ public class DeferredGBufferPass extends RenderPass implements GeometryRenderHan
     protected void execute(FGRenderContext context) {
         FrameBuffer fb = getFrameBuffer(context, 1);
         fb.setMultiTarget(true);
-        resources.acquireColorTargets(fb, gbuffers[0], gbuffers[1], gbuffers[2], gbuffers[3]);
-        resources.acquireDepthTarget(fb, gbuffers[4]);
-        context.getRenderer().setFrameBuffer(fb);
-        context.getRenderer().clearBuffers(true, true, true);
-        context.getRenderer().setBackgroundColor(ColorRGBA.BlackNoAlpha);
+        resources.acquireColorTargets(fb, gbuffers.select(TicketSelector.before(4), new LinkedList()));
+        resources.acquireDepthTarget(fb, gbuffers.get(4));
+        context.registerMode(RenderMode.frameBuffer(fb));
+        context.clearBuffers();
+        context.registerMode(RenderMode.background(ColorRGBA.BlackNoAlpha));
         GeometryQueue queue = resources.acquire(geometry);
-        context.renderGeometry(queue, null, this);
+        queue.render(context, this);
         resources.setPrimitive(skipped, skipQueue);
     }
     @Override
@@ -129,15 +132,14 @@ public class DeferredGBufferPass extends RenderPass implements GeometryRenderHan
     @Override
     protected void cleanup(FrameGraph frameGraph) {}
     @Override
-    public boolean renderGeometry(RenderManager rm, Geometry geom) {
+    public void renderGeometry(FGRenderContext context, Geometry geom) {
         Material material = geom.getMaterial();
         if (!adapter.adaptMaterial(assetManager, material, GBUFFER_PASS)) {
             skipQueue.add(geom);
-            return false;
+            return;
         }
-        material.selectTechnique(GBUFFER_PASS, rm);
-        rm.renderGeometry(geom);
-        return true;
+        material.selectTechnique(GBUFFER_PASS, context.getRenderManager());
+        context.getRenderManager().renderGeometry(geom);
     }
     
     public static void addMaterialAdaption(String matdef, String technique) {

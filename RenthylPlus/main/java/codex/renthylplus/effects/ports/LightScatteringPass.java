@@ -75,7 +75,7 @@ public class LightScatteringPass extends JmeFilterPass {
     @Override
     protected void init(FrameGraph frameGraph) {
         material = new Material(frameGraph.getAssetManager(), "Common/MatDefs/Post/LightScattering.j3md");
-        subpasses.add(new Subpass(material));
+        add(new Subpass(material));
     }
     
     @Override

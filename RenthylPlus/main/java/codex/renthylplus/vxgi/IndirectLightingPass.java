@@ -15,7 +15,9 @@ import codex.renthyl.FrameGraph;
 import codex.renthyl.client.GraphSource;
 import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.modules.RenderPass;
-import codex.renthyl.resources.ResourceTicket;
+import codex.renthyl.resources.tickets.ResourceTicket;
+import codex.renthyl.resources.tickets.TicketArray;
+import codex.renthyl.resources.tickets.TicketSelector;
 import com.jme3.bounding.BoundingBox;
 import com.jme3.math.FastMath;
 import com.jme3.math.Matrix4f;
@@ -25,6 +27,7 @@ import com.jme3.renderer.Camera;
 import com.jme3.texture.Image;
 import com.jme3.texture.Texture2D;
 import com.jme3.texture.Texture3D;
+import com.jme3.texture.TextureImage;
 
 /**
  *
@@ -43,10 +46,7 @@ public class IndirectLightingPass extends RenderPass {
     };
     
     private ResourceTicket<Texture2D> sceneColor, sceneDepth;
-    private ResourceTicket<Texture2D> diffuse;
-    private ResourceTicket<Texture2D> position;
-    private ResourceTicket<Texture2D> normals;
-    private ResourceTicket<Texture2D> material;
+    private TicketArray<Texture2D> materials;
     private ResourceTicket<Texture3D> voxels;
     private ResourceTicket<BoundingBox> voxelBounds;
     private ResourceTicket<Integer> gridSize;
@@ -56,23 +56,21 @@ public class IndirectLightingPass extends RenderPass {
     private final Vector3f gridMin = new Vector3f();
     private final Vector3f gridMax = new Vector3f();
     private final WorkSize work = new WorkSize();
+    private TextureImage resultImg;
     private GLComputeShader shader;
     private GraphSource<Float> traceQuality;
     private GraphSource<Vector2f> specularAngleRange;
     
     @Override
     protected void initialize(FrameGraph frameGraph) {
+        // TODO: group gbuffers into one group
         sceneColor = addInput("SceneColor");
         sceneDepth = addInput("SceneDepth");
-        diffuse = addInput("Diffuse");
-        position = addInput("Position");
-        normals = addInput("Normals");
-        material = addInput("Material");
+        materials = addInputGroup(new TicketArray<>("Material", "Diffuse", "Position", "Normals", "Material"));
         voxels = addInput("Voxels");
         voxelBounds = addInput("Bounds");
         gridSize = addInput("GridSize");
         result = addOutput("Result");
-        resultDef.setAccess(Image.Access.WriteOnly);
         shader = UniversalShaderLoader.loadOpenGLCompute(
                 frameGraph.getAssetManager(), "RenthylPlus/MatDefs/VXGI/pbrIndirect.glsl", Glsl.V450);
         shader.setDefine("NUM_TRACES", tracePattern.length / 3);
@@ -83,7 +81,8 @@ public class IndirectLightingPass extends RenderPass {
     protected void prepare(FGRenderContext context) {
         declare(resultDef, result);
         reserve(result);
-        reference(sceneColor, sceneDepth, diffuse, position, normals, material, voxels, voxelBounds, gridSize);
+        reference(sceneColor, sceneDepth, voxels, voxelBounds, gridSize);
+        reference(materials);
     }
     @Override
     protected void execute(FGRenderContext context) {
@@ -99,12 +98,18 @@ public class IndirectLightingPass extends RenderPass {
         box.getMin(gridMin);
         box.getMax(gridMax);
         
+        if (resultImg == null) {
+            resultImg = new TextureImage(resources.acquire(result), TextureImage.Access.WriteOnly);
+        } else {
+            resultImg.setTexture(resources.acquire(result));
+        }
+        
         shader.set("ColorMap", ArgType.Texture, resources.acquire(sceneColor));
         shader.set("DepthMap", ArgType.Texture, resources.acquire(sceneDepth));
-        shader.set("DiffuseMap", ArgType.Texture, resources.acquire(diffuse));
-        shader.set("PositionMap", ArgType.Texture, resources.acquire(position));
-        shader.set("NormalMap", ArgType.Texture, resources.acquire(normals));
-        shader.set("MaterialMap", ArgType.Texture, resources.acquire(material));
+        shader.set("DiffuseMap", ArgType.Texture, resources.acquire(materials.select(TicketSelector.name("Diffuse"))));
+        shader.set("PositionMap", ArgType.Texture, resources.acquire(materials.select(TicketSelector.name("Position"))));
+        shader.set("NormalMap", ArgType.Texture, resources.acquire(materials.select(TicketSelector.name("Normals"))));
+        shader.set("MaterialMap", ArgType.Texture, resources.acquire(materials.select(TicketSelector.name("Material"))));
         shader.set("VoxelMap", ArgType.Texture, resources.acquire(voxels));
         shader.set("CameraMatrixInverse", ArgType.Matrix4, camInverse);
         shader.set("CameraPosition", ArgType.Vector3, cam.getLocation());
@@ -114,7 +119,7 @@ public class IndirectLightingPass extends RenderPass {
         shader.set("TraceQuality", ArgType.Float, GraphSource.get(traceQuality, 1f, context));
         shader.set("SpecularAngleRange", ArgType.Vector2, GraphSource.get(specularAngleRange, SPEC_RANGE, context));
         shader.set("IndirectFactor", ArgType.Float, 0.5f);
-        shader.set("Target", ArgType.Texture, resources.acquire(result));
+        shader.set("Target", ArgType.Image, resultImg);
         shader.execute(work.setGlobal(w, h, 1).setLocal(tracePattern.length/3 + 1, 1, 1));
         
     }

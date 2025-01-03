@@ -10,11 +10,11 @@ import codex.renthyl.FrameGraph;
 import codex.renthyl.GeometryQueue;
 import codex.renthyl.client.GraphSource;
 import codex.renthyl.definitions.TextureDef;
+import codex.renthyl.draw.RenderMode;
 import codex.renthyl.modules.RenderPass;
-import codex.renthyl.resources.ResourceTicket;
+import codex.renthyl.resources.tickets.ResourceTicket;
 import codex.renthyl.util.GeometryRenderHandler;
 import com.jme3.material.Material;
-import com.jme3.renderer.RenderManager;
 import com.jme3.renderer.queue.NullComparator;
 import com.jme3.scene.Geometry;
 import com.jme3.texture.FrameBuffer;
@@ -69,16 +69,16 @@ public class OcclusionCullingPass extends RenderPass {
         int w = (int)(context.getWidth() * d);
         int h = (int)(context.getHeight() * d);
         depthDef.setSize(w, h);
-        context.resizeCamera(w, h, false, false, false);
+        context.registerMode(RenderMode.cameraSize(w, h));
         
         // render visible geometries
         FrameBuffer fb = getFrameBuffer(w, h, 1);
         resources.acquireDepthTarget(fb, depth);
-        context.getRenderer().setFrameBuffer(fb);
-        context.getRenderer().clearBuffers(true, true, true);
-        context.getRenderManager().setForcedMaterial(material);
+        context.registerMode(RenderMode.frameBuffer(fb));
+        context.clearBuffers();
+        context.registerMode(RenderMode.forcedMaterial(material));
         GeometryQueue geoms = resources.acquire(geometry);
-        context.renderGeometry(geoms, null, VISIBLE_HANDLER);
+        geoms.render(context, VISIBLE_HANDLER);
         
         // render invisible geometries
         
@@ -97,13 +97,11 @@ public class OcclusionCullingPass extends RenderPass {
         }
         
         @Override
-        public boolean renderGeometry(RenderManager rm, Geometry g) {
+        public void renderGeometry(FGRenderContext context, Geometry g) {
             Boolean visible = g.getUserData(VISIBLE);
             if (renderVisible == (visible == null || visible)) {
-                rm.renderGeometry(g);
-                return true;
+                context.getRenderManager().renderGeometry(g);
             }
-            return false;
         }
         
     }

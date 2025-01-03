@@ -13,6 +13,8 @@ import codex.renthyl.Renthyl;
 import codex.renthyl.client.GraphSetting;
 import codex.renthyl.client.GraphSource;
 import codex.renthyl.definitions.TextureDef;
+import codex.renthyl.draw.RenderMode;
+import codex.renthyl.modules.ControlRenderPass;
 import codex.renthyl.modules.Junction;
 import codex.renthyl.modules.OutputPass;
 import codex.renthyl.modules.RenderContainer;
@@ -22,10 +24,10 @@ import codex.renthyl.modules.geometry.GeometryPass;
 import codex.renthyl.modules.geometry.QueueMergePass;
 import codex.renthyl.modules.geometry.SceneEnqueuePass;
 import codex.renthyl.resources.ResourceTicket;
-import codex.renthylplus.effects.FilterStack;
+import codex.renthyl.util.GeometryRenderHandler;
+import codex.renthylplus.effects.FilterChain;
 import codex.renthylplus.effects.ports.*;
 import com.jme3.app.SimpleApplication;
-import com.jme3.asset.plugins.FileLocator;
 import com.jme3.font.BitmapText;
 import com.jme3.input.KeyInput;
 import com.jme3.input.controls.ActionListener;
@@ -38,9 +40,6 @@ import com.jme3.math.Vector3f;
 import com.jme3.post.filters.BloomFilter;
 import com.jme3.renderer.ViewPort;
 import com.jme3.scene.Geometry;
-import com.jme3.scene.Node;
-import com.jme3.scene.SceneGraphIterator;
-import com.jme3.scene.Spatial;
 import com.jme3.scene.shape.Box;
 import com.jme3.shader.Shader;
 import com.jme3.shader.VarType;
@@ -94,7 +93,8 @@ public class TestJmeFilters extends SimpleApplication {
         FrameGraph fg = new FrameGraph(assetManager);
         viewPort.setPipeline(fg);
         
-        SceneEnqueuePass enqueue = fg.add(new SceneEnqueuePass(true, true));
+        fg.add(new ControlRenderPass());
+        SceneEnqueuePass enqueue = fg.add(SceneEnqueuePass.withLegacyQueues());
         QueueMergePass merge = fg.add(new QueueMergePass(5));
         geometry = fg.add(new GeometryPass());
         NormalPass normals = fg.add(new NormalPass());
@@ -128,7 +128,7 @@ public class TestJmeFilters extends SimpleApplication {
         SSRPass ssr = fpp.add(new SSRPass());
         fpp.makeInternalInput("Normals", "Normals", ssr);
         
-        FilterStack<RenderModule> stack = fpp.add(new FilterStack<>());
+        FilterChain<RenderModule> stack = fpp.add(new FilterChain<>());
         stack.addInput("Normals");
         fpp.makeInternalInput("Normals", "Normals", stack);
         CartoonEdgePass cartoon2 = stack.add(new CartoonEdgePass());
@@ -322,11 +322,11 @@ public class TestJmeFilters extends SimpleApplication {
             depthDef.setSize(fb.getWidth(), fb.getHeight());
             resources.acquireColorTarget(fb, result);
             resources.acquireDepthTarget(fb, depth);
-            context.getRenderer().setFrameBuffer(fb);
-            context.getRenderer().clearBuffers(true, true, true);
-            context.getRenderManager().setForcedTechnique("PreNormalPass");
-            context.getRenderManager().setForcedMaterial(material);
-            context.renderGeometry(resources.acquire(geometry), null, null);
+            context.registerMode(RenderMode.frameBuffer(fb));
+            context.clearBuffers();
+            context.registerMode(RenderMode.forcedTechnique("PreNormalPass"));
+            context.registerMode(RenderMode.forcedMaterial(material));
+            resources.acquire(geometry).render(context, GeometryRenderHandler.DEFAULT);
         }
         @Override
         protected void reset(FGRenderContext context) {}
@@ -396,9 +396,9 @@ public class TestJmeFilters extends SimpleApplication {
             resultDef.setFormat(inTex1.getImage().getFormat());
             FrameBuffer fb = getFrameBuffer(w, h, 1);
             resources.acquireColorTarget(fb, result);
-            context.getRenderer().setFrameBuffer(fb);
-            context.getRenderer().clearBuffers(true, true, true);
-            context.resizeCamera(w, h, false, false, false);
+            context.registerMode(RenderMode.cameraSize(w, h));
+            context.registerMode(RenderMode.frameBuffer(fb));
+            context.clearBuffers();
             material.setTexture("Texture1", inTex1);
             material.setTexture("Texture2", inTex2);
             if (divideSource != null) {

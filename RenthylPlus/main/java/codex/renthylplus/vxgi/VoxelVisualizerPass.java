@@ -8,8 +8,10 @@ import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.GeometryQueue;
 import codex.renthyl.definitions.TextureDef;
+import codex.renthyl.draw.RenderMode;
 import codex.renthyl.modules.RenderPass;
-import codex.renthyl.resources.ResourceTicket;
+import codex.renthyl.resources.tickets.ResourceTicket;
+import codex.renthyl.util.GeometryRenderHandler;
 import com.jme3.bounding.BoundingBox;
 import com.jme3.material.Material;
 import com.jme3.material.RenderState;
@@ -53,15 +55,14 @@ public class VoxelVisualizerPass extends RenderPass {
     }
     @Override
     protected void execute(FGRenderContext context) {
-        //context.getRenderManager().setCamera(context.getViewPort().getCamera(), false);
         
         colorDef.setSize(context.getWidth(), context.getHeight());
-        depthDef.setSize(context.getWidth(), context.getHeight());
-        FrameBuffer fb = getFrameBuffer(context.getWidth(), context.getHeight(), 1);
+        depthDef.setSize(colorDef);
+        FrameBuffer fb = getFrameBuffer(context, 1);
         resources.acquireColorTarget(fb, color);
         resources.acquireDepthTarget(fb, depth);
-        context.getRenderer().setFrameBuffer(fb);
-        context.getRenderer().clearBuffers(true, true, true);
+        context.registerMode(RenderMode.frameBuffer(fb));
+        context.clearBuffers();
         
         BoundingBox box = resources.acquire(bounds);
         Vector3f min = box.getMin(new Vector3f());
@@ -69,14 +70,10 @@ public class VoxelVisualizerPass extends RenderPass {
         material.setTexture("VoxelMap", resources.acquire(voxels));
         material.setVector3("GridMin", min);
         material.setVector3("GridMax", max);
-        context.getRenderManager().setForcedMaterial(material);
-        
-        //Material m = new Material(frameGraph.getAssetManager(), "Common/MatDefs/Misc/Unshaded.j3md");
-        //m.setColor("Color", ColorRGBA.Blue);
-        //context.getRenderManager().setForcedMaterial(m);
+        context.registerMode(RenderMode.forcedMaterial(material));
         
         GeometryQueue queue = resources.acquire(geometry);
-        queue.render(context.getRenderManager(), null);
+        queue.render(context, GeometryRenderHandler.DEFAULT);
         
     }
     @Override

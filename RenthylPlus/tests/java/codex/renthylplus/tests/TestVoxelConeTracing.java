@@ -10,6 +10,7 @@ import codex.renthyl.FrameGraph;
 import codex.renthyl.Renthyl;
 import codex.renthyl.client.GraphSetting;
 import codex.renthyl.client.GraphSource;
+import codex.renthyl.modules.ControlRenderPass;
 import codex.renthyl.modules.Junction;
 import codex.renthyl.modules.OutputPass;
 import codex.renthyl.modules.cache.CacheRead;
@@ -30,7 +31,6 @@ import codex.renthylplus.vxgi.VoxelShadowComposerPass;
 import codex.renthylplus.vxgi.VoxelVisualizerPass;
 import codex.renthylplus.vxgi.VoxelizationPass;
 import com.github.stephengold.wrench.LwjglAssetLoader;
-import com.jme3.app.DetailedProfilerState;
 import com.jme3.app.SimpleApplication;
 import com.jme3.bounding.BoundingBox;
 import com.jme3.input.KeyInput;
@@ -55,14 +55,13 @@ public class TestVoxelConeTracing extends SimpleApplication {
     
     private int frame = 0;
     private final int numLights = 0;
+    private SpotLight spot;
     
     public static void main(String[] args) {
         TestVoxelConeTracing app = new TestVoxelConeTracing();
         AppSettings settings = new AppSettings(true);
         settings.setWidth(768);
         settings.setHeight(768);
-        settings.setVSync(false);
-        settings.setFrameRate(0);
         settings.setRenderer(AppSettings.LWJGL_OPENGL45);
         app.setSettings(settings);
         app.setShowSettings(false);
@@ -102,8 +101,8 @@ public class TestVoxelConeTracing extends SimpleApplication {
 //        }
         rootNode.attachChild(temple);
         
-        SpotLight spot = new SpotLight();
-        spot.setPosition(new Vector3f(15, 15, 15));
+        spot = new SpotLight();
+        spot.setPosition(new Vector3f(10, 10, 10));
         spot.setDirection(new Vector3f(-1f, -1f, -0.7f).normalizeLocal());
         spot.setColor(ColorRGBA.White.mult(4f));
         spot.setSpotRange(1000f);
@@ -121,7 +120,7 @@ public class TestVoxelConeTracing extends SimpleApplication {
             rootNode.addLight(pl);
         }
                 
-        stateManager.attach(new DetailedProfilerState());
+        //stateManager.attach(new DetailedProfilerState());
         
         cam.setLocation(new Vector3f(-25, 25, -25));
         cam.setFov(100);
@@ -133,8 +132,9 @@ public class TestVoxelConeTracing extends SimpleApplication {
         
         GraphSetting<String> voxelCacheKey = new GraphSetting<>("TemporalVoxels", "TemporalVoxels");
         
+        fg.add(new ControlRenderPass());
         CacheRead<Texture3D> voxelRead = fg.add(new CacheRead<>(Texture3D.class, voxelCacheKey));
-        SceneEnqueuePass enqueue = fg.add(SceneEnqueuePass.withDefaultQueue(true));
+        SceneEnqueuePass enqueue = fg.add(SceneEnqueuePass.withSingleQueue());
         GeometryDepthPass depth = fg.add(new GeometryDepthPass());
         SpotShadowPass spotShadows = fg.add(new SpotShadowPass(1024));
         VoxelEnvSetupPass voxelEnv = fg.add(new VoxelEnvSetupPass());
@@ -152,18 +152,27 @@ public class TestVoxelConeTracing extends SimpleApplication {
         ShadowMapViewPass shadowDebug = fg.add(new ShadowMapViewPass());
         CacheWrite voxelWrite = fg.add(new CacheWrite(voxelCacheKey));
         
+        // depth pre-pass
         depth.makeInput(enqueue, "Default", "Geometry");
+        
+        // calculate screen space and voxel space shadows
         spotShadows.makeInput(enqueue, "Default", "Occluders");
         shadows.makeInput(depth, "Depth", "ReceiverDepth");
         shadows.makeGroupInputToList(spotShadows, "ShadowMaps", "ShadowMaps");
         voxShadows.makeInput(voxelEnv, "GridSize", "GridSize");
         voxShadows.makeInput(voxelEnv, "Bounds", "Bounds");
         voxShadows.makeGroupInputToList(spotShadows, "ShadowMaps", "ShadowMaps");
+        
+        // pack lights into arrays
         lightArray.makeInput(lightGather, "Lights", "Lights");
         lightArray.makeInput(voxShadows, "LightShadowIndices", "Shadows");
+        
+        // calculate direct lighting
         direct.makeInput(enqueue, "Default", "Geometry");
         direct.makeInput(lightArray, "LightArray", "Lights");
         direct.makeInput(shadows, "LightContribution", "LightContribution");
+        
+        // voxelize the scene
         voxels.makeInput(enqueue, "Default", "Geometry");
         voxels.makeInput(lightArray, "LightArray", "Lights");
         voxels.makeInput(lightArray, "Ambient", "Ambient");
@@ -171,11 +180,16 @@ public class TestVoxelConeTracing extends SimpleApplication {
         voxels.makeInput(voxelEnv, "GridSize", "GridSize");
         voxels.makeInput(voxelEnv, "Bounds", "Bounds");
         voxels.makeInput(voxelRead, CacheRead.OUTPUT, "TemporalVoxels");
+        
+        // debug
         //sliceDebug.makeInput(voxels, "Voxels", "Voxels");
         sliceDebug.makeInput(voxShadows, "LightContribution", "Voxels");
         vis.makeInput(voxels, "Voxels", "Voxels");
+        //vis.makeInput(voxShadows, "LightContribution", "Voxels");
         vis.makeInput(voxelEnv, "Bounds", "Bounds");
         vis.makeInput(enqueue, "Default", "Geometry");
+        
+        // calculate indirect
         indirect.makeInput(direct, "Color", "SceneColor");
         indirect.makeInput(direct, "Depth", "SceneDepth");
         indirect.makeInput(direct, "Diffuse", "Diffuse");
@@ -185,6 +199,8 @@ public class TestVoxelConeTracing extends SimpleApplication {
         indirect.makeInput(voxels, "Voxels", "Voxels");
         indirect.makeInput(voxelEnv, "Bounds", "Bounds");
         indirect.makeInput(voxelEnv, "GridSize", "GridSize");
+        
+        // display result
         outJunct.makeInput(indirect, "Result", Junction.getInput(0));
         outJunct.makeInput(shadows, "LightContribution", Junction.getInput(1));
         outJunct.makeInput(vis, "Color", Junction.getInput(2));
@@ -192,12 +208,14 @@ public class TestVoxelConeTracing extends SimpleApplication {
         outJunct.makeInput(depth, "Depth", Junction.getInput(4));
         outJunct.makeInput(direct, "Color", Junction.getInput(5));
         out.makeInput(outJunct, Junction.getOutput(), "Color");
-        voxelWrite.makeInput(voxels, "Voxels", CacheWrite.INPUT);
         //shadowDebug.makeInput(spotShadows, "ShadowMaps[0]", "ShadowMap");
         
-        enqueue.setFrustumCulling(false);
+        // cache voxels for temporal lighting
+        voxelWrite.makeInput(voxels, "Voxels", CacheWrite.INPUT);
+        
+        //enqueue.setFrustumCulling(false);
         voxelEnv.setBounds(GraphSource.value(new BoundingBox(Vector3f.ZERO, 40, 40, 40)));
-        voxelEnv.setGridSize(GraphSource.value(64));
+        voxelEnv.setGridSize(GraphSource.value(128));
         new IndexSwitch(inputManager, new KeyTrigger(KeyInput.KEY_SPACE)).setJunction(outJunct);
         spotShadows.setLightSource(GraphSource.value(spot));
         
@@ -207,6 +225,8 @@ public class TestVoxelConeTracing extends SimpleApplication {
         if (++frame < 5) {
             cam.lookAt(Vector3f.ZERO, Vector3f.UNIT_Y);
         }
+        //spot.setPosition(cam.getLocation());
+        //spot.setDirection(cam.getDirection());
     }
     
 }

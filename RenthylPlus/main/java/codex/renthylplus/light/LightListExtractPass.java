@@ -30,8 +30,8 @@ package codex.renthylplus.light;
 
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
-import codex.renthyl.resources.ResourceTicket;
 import codex.renthyl.modules.RenderPass;
+import codex.renthyl.resources.tickets.ResourceTicket;
 import com.jme3.light.Light;
 import com.jme3.light.LightList;
 import com.jme3.light.LightProbe;

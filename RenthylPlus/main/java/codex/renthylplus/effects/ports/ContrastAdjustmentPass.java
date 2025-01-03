@@ -84,7 +84,7 @@ public class ContrastAdjustmentPass extends JmeFilterPass {
         setExponents(redExponent, greenExponent, blueExponent);
         setInputRange(lowerLimit, upperLimit);
         setScales(redScale, greenScale, blueScale);
-        subpasses.add(new Subpass(material));
+        add(new Subpass(material));
     }
 
     /**

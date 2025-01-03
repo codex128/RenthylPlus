@@ -33,7 +33,7 @@ package codex.renthylplus.effects.ports;
 
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
-import codex.renthyl.resources.ResourceTicket;
+import codex.renthyl.resources.tickets.ResourceTicket;
 import codex.renthylplus.effects.JmeFilterPass;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
@@ -71,7 +71,7 @@ public class CartoonEdgePass extends JmeFilterPass {
         material.setFloat("NormalSensitivity", normalSensitivity);
         material.setFloat("DepthSensitivity", depthSensitivity);
         material.setColor("EdgeColor", edgeColor);
-        subpasses.add(new Subpass(material, true, true) {
+        add(new Subpass(material, true, true) {
             @Override
             public void beforeRender(FGRenderContext context) {
                 material.setTexture("NormalsTexture", resources.acquire(normals));

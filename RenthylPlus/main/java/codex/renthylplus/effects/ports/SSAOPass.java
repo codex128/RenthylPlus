@@ -34,7 +34,7 @@ package codex.renthylplus.effects.ports;
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.definitions.TextureDef;
-import codex.renthyl.resources.ResourceTicket;
+import codex.renthyl.resources.tickets.ResourceTicket;
 import codex.renthylplus.effects.JmeFilterPass;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
@@ -127,7 +127,7 @@ public class SSAOPass extends JmeFilterPass {
         });
         
         material = new Material(frameGraph.getAssetManager(), "Common/MatDefs/SSAO/ssaoBlur.j3md");
-        subpasses.add(new Subpass("blur", material) {
+        add(new Subpass("blur", material) {
             @Override
             public void beforeRender(FGRenderContext context) {
                 material.setTexture("SSAOMap", ssaoPass.getRenderedTexture());
