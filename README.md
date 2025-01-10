@@ -1,7 +1,6 @@
-Rendering models and techniques for JMonkeyEngine using [Renthyl](https://github.com/codex128/Renthyl) FrameGraphs.
+Rendering models and techniques for JMonkeyEngine using [Renthyl](https://github.com/codex128/Renthyl) FrameGraphs. This project is still under development and may contain experimental features that do not work.
 
-:warning: **Warning!** :warning:<br>
-This project is still under development!
+[![](https://jitpack.io/v/codex128/RenthylPlus.svg)](https://jitpack.io/#codex128/RenthylPlus)
 
 ## Features
 
