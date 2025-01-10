@@ -1,0 +1,75 @@
+
+
+
+plugins {
+    id 'buildlogic.java-application-conventions'
+    id 'java-library'
+    id 'maven-publish'
+    id 'signing'
+}
+
+repositories {
+    mavenCentral()
+    jcenter()
+	maven { url "https://jitpack.io" }
+}
+
+project.ext {
+    jmeVer = '3.8.0-alpha2'
+    renthylVer = 'v1.2.4'
+    boostVer = '1.2.3'
+}
+
+dependencies {
+    implementation "org.jmonkeyengine:jme3-core:$jmeVer"
+    implementation "org.jmonkeyengine:jme3-lwjgl3:$jmeVer"
+    implementation "org.jmonkeyengine:jme3-effects:$jmeVer"
+    implementation "com.github.codex128:Renthyl:$renthylVer"
+    implementation "com.github.codex128:Boost:$boostVer"
+    implementation 'com.github.codex128:JMECompute:v1.0.0'
+}
+
+task copyJavadoc(dependsOn: javadoc) {
+    
+}
+
+// remove the generated javadocs in the /docs folder
+task cleanJavadoc(type: Delete) {
+    delete "$projectDir/docs/javadoc/"
+}
+
+clean {
+    dependsOn cleanJavadoc
+}
+
+build {
+    dependsOn copyJavadoc
+}
+
+task sourcesJar(type: Jar) {
+    from sourceSets.main.allJava
+    archiveClassifier = 'sources'
+}
+
+task javadocJar(type: Jar) {
+    from javadoc
+    archiveClassifier = 'javadoc'
+}
+
+javadoc {
+    failOnError = false
+}
+
+publishing {
+    publications {
+        MyPublication(MavenPublication) {
+            groupId = 'com.github.codex128'
+            artifactId = 'renthylplus-rendering-library'
+            version = '1.0.0'
+            from components.java
+            artifact sourcesJar
+            artifact javadocJar
+        }
+    }
+}
+

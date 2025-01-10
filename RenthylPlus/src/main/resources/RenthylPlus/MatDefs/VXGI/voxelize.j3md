@@ -1,0 +1,58 @@
+MaterialDef Voxelize {
+
+    MaterialParameters {
+        
+        // voxels
+        Image3D VoxelMap
+        
+        // temporal
+        Texture3D TemporalVoxelMap
+        Vector3 GridMin
+        Vector3 GridMax
+        Int GridSize
+        Float Attenuation : 0.3
+        
+        // light
+        FloatArray LightData
+        Texture3D LightContributionMap
+        Color AmbientLight
+        Int LightDataSize
+        
+        // coloring
+        Texture2D BaseColorMap
+        Texture2D EmissiveMap
+        Color BaseColor : 1.0 1.0 1.0 1.0
+        Color Emissive
+        Float EmissivePower : 2f
+        Float EmissiveIntensity : 5f
+        Float AlphaDiscardThreshold
+        
+    }
+
+    Technique {
+    
+        VertexShader   GLSL450 GLSL430 : RenthylPlus/MatDefs/VXGI/voxelize.vert
+        GeometryShader GLSL450 GLSL430 : RenthylPlus/MatDefs/VXGI/voxelize.geom
+        FragmentShader GLSL450 GLSL430 : RenthylPlus/MatDefs/VXGI/voxelize.frag
+
+        WorldParameters {
+            WorldMatrix
+            WorldNormalMatrix
+            CameraPosition
+            Time
+        }
+
+        Defines {
+            LIGHT_DATA_SIZE : LightDataSize
+            SHADOWS : LightContributionMap
+            TEMPORAL : TemporalVoxelMap
+            BASECOLORMAP : BaseColorMap
+            EMISSIVE : Emissive
+            EMISSIVEMAP : EmissiveMap
+            SHADOWS : LightContributionMap
+            DISCARD_ALPHA : AlphaDiscardThreshold
+        }
+        
+    }
+
+}

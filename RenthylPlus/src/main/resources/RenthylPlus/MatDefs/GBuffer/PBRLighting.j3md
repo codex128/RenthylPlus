@@ -1,0 +1,81 @@
+MaterialDef PBRLighting {
+    
+    MaterialParameters {
+        
+        // It is important to include all parameters that are mapped to
+        // defines, with the correct types.
+        
+        Texture2D BaseColorMap
+        Texture2D NormalMap
+        Texture2D MetallicMap
+        Texture2D RoughnessMap
+        Texture2D EmissiveMap
+        Color Emissive
+        Boolean UseSpecGloss
+        Texture2D ParallaxMap
+        Boolean PackedNormalParallax
+        Boolean SteepParallax
+        Texture2D LightMap
+        Boolean SeparateTexCoord
+        Float AlphaDiscardThreshold
+        Int NumberOfBones
+        Boolean UseInstancing
+        Texture2D MetallicRoughnessMap
+        Texture2D SpecularGlossinessMap
+        Texture2D SpecularMap
+        Texture2D GlossinessMap
+        Float NormalType
+        Boolean UseVertexColor
+        Boolean LightMapAsAOMap
+        Boolean AoPackedInMRMap
+        Int NumberOfMorphTargets
+        Int NumberOfTargetsBuffers
+        Boolean HorizonFade
+        
+    }
+    
+    Technique GBufferPass {
+        
+        VertexShader GLSL310 GLSL300 GLSL100 GLSL150   : RenthylPlus/MatDefs/GBuffer/PBRLighting.vert
+        FragmentShader GLSL310 GLSL300 GLSL100 GLSL150 : RenthylPlus/MatDefs/GBuffer/PBRLighting.frag
+
+        WorldParameters {
+            WorldViewProjectionMatrix
+            CameraPosition
+            WorldMatrix
+            WorldNormalMatrix
+            ViewProjectionMatrix
+            ViewMatrix
+        }
+
+        Defines {
+            BASECOLORMAP : BaseColorMap
+            NORMALMAP : NormalMap
+            METALLICMAP : MetallicMap
+            ROUGHNESSMAP : RoughnessMap
+            EMISSIVEMAP : EmissiveMap
+            EMISSIVE : Emissive
+            SPECGLOSSPIPELINE : UseSpecGloss
+            PARALLAXMAP : ParallaxMap
+            NORMALMAP_PARALLAX : PackedNormalParallax
+            STEEP_PARALLAX : SteepParallax
+            LIGHTMAP : LightMap
+            SEPARATE_TEXCOORD : SeparateTexCoord
+            DISCARD_ALPHA : AlphaDiscardThreshold
+            NUM_BONES : NumberOfBones
+            INSTANCING : UseInstancing
+            USE_PACKED_MR: MetallicRoughnessMap
+            USE_PACKED_SG: SpecularGlossinessMap
+            SPECULARMAP : SpecularMap
+            GLOSSINESSMAP : GlossinessMap
+            NORMAL_TYPE: NormalType
+            VERTEX_COLOR : UseVertexColor
+            AO_MAP: LightMapAsAOMap
+            AO_PACKED_IN_MR_MAP : AoPackedInMRMap
+            NUM_MORPH_TARGETS: NumberOfMorphTargets
+            NUM_TARGETS_BUFFERS: NumberOfTargetsBuffers
+            HORIZON_FADE: HorizonFade
+        }
+    }
+
+}

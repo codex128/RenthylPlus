@@ -1,0 +1,23 @@
+MaterialDef Voxelize {
+
+    MaterialParameters {
+        
+        Texture3D VoxelMap
+        Vector3 GridMin
+        Vector3 GridMax
+        
+    }
+
+    Technique {
+    
+        VertexShader   GLSL450 GLSL430 : RenthylPlus/MatDefs/VXGI/voxelDebug.vert
+        FragmentShader GLSL450 GLSL430 : RenthylPlus/MatDefs/VXGI/voxelDebug.frag
+
+        WorldParameters {
+            WorldMatrix
+            WorldViewProjectionMatrix
+        }
+        
+    }
+
+}

@@ -1,0 +1,40 @@
+MaterialDef SSRBlur {
+    
+    // BSD 3-Clause License
+    // Copyright (c) 2021, Rickard Eden
+    // All rights reserved.
+    
+    MaterialParameters {
+        Texture2D Texture
+        Texture2D SSR
+        Boolean Horizontal
+        Boolean Vertical
+        Boolean FastBlur : False  
+        Float BlurScale: 1.0
+        Float Sigma: 5.0
+
+        Int NumSamples
+         
+    }
+
+    Technique {
+        VertexShader GLSL300 GLSL130:   RenthylCore/MatDefs/Fullscreen/Screen.vert
+        FragmentShader GLSL300 GLSL130:  RenthylPlus/MatDefs/Effects/SSRBlur.frag
+
+
+        WorldParameters {
+            Resolution
+            ResolutionInverse
+        }
+
+        Defines {
+            FINAL:Texture
+            HORIZONTAL : Horizontal
+            VERTICAL : Vertical
+            USE_FAST_BLUR : FastBlur
+        }
+
+    }
+
+   
+}
