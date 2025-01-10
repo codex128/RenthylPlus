@@ -1,0 +1,11 @@
+MaterialDef UnshadedProjection {
+    
+    MaterialParameters {
+        
+        Texture2D Texture
+        Texture2D DepthMap
+        Matrix4 ProjectorViewMatrix
+        
+    }
+    
+}

@@ -1,0 +1,232 @@
+/*
+ * Copyright (c) 2024 jMonkeyEngine
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ *
+ * * Redistributions of source code must retain the above copyright
+ *   notice, this list of conditions and the following disclaimer.
+ *
+ * * Redistributions in binary form must reproduce the above copyright
+ *   notice, this list of conditions and the following disclaimer in the
+ *   documentation and/or other materials provided with the distribution.
+ *
+ * * Neither the name of 'jMonkeyEngine' nor the names of its contributors
+ *   may be used to endorse or promote products derived from this software
+ *   without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+package codex.renthylplus.effects.ports;
+
+import codex.renthyl.FGRenderContext;
+import codex.renthyl.FrameGraph;
+import codex.renthylplus.effects.JmeFilterPass;
+import com.jme3.export.InputCapsule;
+import com.jme3.export.JmeExporter;
+import com.jme3.export.JmeImporter;
+import com.jme3.export.OutputCapsule;
+import com.jme3.material.Material;
+import com.jme3.math.FastMath;
+import com.jme3.math.Vector3f;
+import com.jme3.renderer.Camera;
+import java.io.IOException;
+
+/**
+ *
+ * @author codex
+ */
+public class LightScatteringPass extends JmeFilterPass {
+    
+    private Material material;
+    private Vector3f lightPosition;
+    private final Vector3f screenLightPos = new Vector3f();
+    private int nbSamples = 50;
+    private float blurStart = 0.02f;
+    private float blurWidth = 0.9f;
+    private float lightDensity = 1.4f;
+    private boolean adaptive = true;
+    private final Vector3f viewLightPos = new Vector3f();
+    private boolean display = true;
+    private float innerLightDensity;
+    
+    /**
+     * Creates a lightScatteringPass.
+     *
+     * @param lightPosition the desired location (in world coordinates, alias
+     * created)
+     */
+    public LightScatteringPass(Vector3f lightPosition) {
+        this.lightPosition = new Vector3f(lightPosition);
+    }
+    
+    @Override
+    protected void init(FrameGraph frameGraph) {
+        material = new Material(frameGraph.getAssetManager(), "Common/MatDefs/Post/LightScattering.j3md");
+        add(new Subpass(material));
+    }
+    
+    @Override
+    public void execute(FGRenderContext context) {
+        Camera cam = context.getViewPort().getCamera();
+        getClipCoordinates(lightPosition, screenLightPos, cam);
+        cam.getViewMatrix().mult(lightPosition, viewLightPos);        
+        if (adaptive) {
+            float densityX = 1f - FastMath.clamp(FastMath.abs(screenLightPos.x - 0.5f), 0, 1);
+            float densityY = 1f - FastMath.clamp(FastMath.abs(screenLightPos.y - 0.5f), 0, 1);
+            innerLightDensity = lightDensity * densityX * densityY;
+        } else {
+            innerLightDensity = lightDensity;
+        }
+        display = innerLightDensity != 0.0 && viewLightPos.z < 0;
+        material.setVector3("LightPosition", screenLightPos);
+        material.setInt("NbSamples", nbSamples);
+        material.setFloat("BlurStart", blurStart);
+        material.setFloat("BlurWidth", blurWidth);
+        material.setFloat("LightDensity", innerLightDensity);
+        material.setBoolean("Display", display);
+        super.execute(context);
+    }
+
+    private Vector3f getClipCoordinates(Vector3f worldPosition, Vector3f store, Camera cam) {
+
+        float w = cam.getViewProjectionMatrix().multProj(worldPosition, store);
+        store.divideLocal(w);
+
+        store.x = ((store.x + 1f) * (cam.getViewPortRight() - cam.getViewPortLeft()) / 2f + cam.getViewPortLeft());
+        store.y = ((store.y + 1f) * (cam.getViewPortTop() - cam.getViewPortBottom()) / 2f + cam.getViewPortBottom());
+        store.z = (store.z + 1f) / 2f;
+
+        return store;
+    }
+
+    /**
+     * returns the blur start of the scattering 
+     * see {@link #setBlurStart(float blurStart)}
+     * @return the start distance
+     */
+    public float getBlurStart() {
+        return blurStart;
+    }
+
+    /**
+     * sets the blur start<br>
+     * at which distance from the light source the effect starts default is 0.02
+     *
+     * @param blurStart the desired start distance (in world units,
+     * default=0.02)
+     */
+    public void setBlurStart(float blurStart) {
+        this.blurStart = blurStart;
+    }
+
+    /**
+     * returns the blur width<br>
+     * see {@link #setBlurWidth(float blurWidth)}
+     * @return the width
+     */
+    public float getBlurWidth() {
+        return blurWidth;
+    }
+
+    /**
+     * sets the blur width default is 0.9
+     *
+     * @param blurWidth the desired width (default=0.9)
+     */
+    public void setBlurWidth(float blurWidth) {
+        this.blurWidth = blurWidth;
+    }
+
+    /**
+     * returns the light density
+     * see {@link #setLightDensity(float lightDensity)}
+     * 
+     * @return the density
+     */
+    public float getLightDensity() {
+        return lightDensity;
+    }
+
+    /**
+     * sets how much the effect is visible over the rendered scene default is 1.4
+     *
+     * @param lightDensity the desired density (default=1.4)
+     */
+    public void setLightDensity(float lightDensity) {
+        this.lightDensity = lightDensity;
+    }
+
+    /**
+     * returns the light position
+     * @return the pre-existing vector
+     */
+    public Vector3f getLightPosition() {
+        return lightPosition;
+    }
+
+    /**
+     * sets the light position
+     *
+     * @param lightPosition the desired location (in world coordinates, alias
+     * created)
+     */
+    public void setLightPosition(Vector3f lightPosition) {
+        this.lightPosition = lightPosition;
+    }
+
+    /**
+     * returns the number of samples for the radial blur
+     * @return count (&ge;0)
+     */
+    public int getNbSamples() {
+        return nbSamples;
+    }
+
+    /**
+     * sets the number of samples for the radial blur default is 50
+     * the higher the value the higher the quality, but the slower the performance.
+     *
+     * @param nbSamples the desired number of samples (default=50)
+     */
+    public void setNbSamples(int nbSamples) {
+        this.nbSamples = nbSamples;
+    }
+
+    @Override
+    public void write(JmeExporter ex) throws IOException {
+        super.write(ex);
+        OutputCapsule oc = ex.getCapsule(this);
+        oc.write(lightPosition, "lightPosition", Vector3f.ZERO);
+        oc.write(nbSamples, "nbSamples", 50);
+        oc.write(blurStart, "blurStart", 0.02f);
+        oc.write(blurWidth, "blurWidth", 0.9f);
+        oc.write(lightDensity, "lightDensity", 1.4f);
+        oc.write(adaptive, "adaptative", true);
+    }
+
+    @Override
+    public void read(JmeImporter im) throws IOException {
+        super.read(im);
+        InputCapsule ic = im.getCapsule(this);
+        lightPosition = (Vector3f) ic.readSavable("lightPosition", Vector3f.ZERO);
+        nbSamples = ic.readInt("nbSamples", 50);
+        blurStart = ic.readFloat("blurStart", 0.02f);
+        blurWidth = ic.readFloat("blurWidth", 0.9f);
+        lightDensity = ic.readFloat("lightDensity", 1.4f);
+        adaptive = ic.readBoolean("adaptative", true);
+    }
+    
+}

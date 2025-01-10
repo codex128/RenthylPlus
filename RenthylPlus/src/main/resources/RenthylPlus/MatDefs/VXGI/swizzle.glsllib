@@ -1,0 +1,22 @@
+
+vec3 swizzleVertex(vec3 p, vec3 n) {
+    if (n.x > n.y && n.x > n.z) {
+        // x major
+        return vec3(p.yz, 0.0);
+    } else if (n.y > n.z) {
+        // y major
+        return vec3(p.xz, 0.0);
+    } else {
+        // z major
+        return vec3(p.xy, 0.0);
+    }
+}
+
+vec3 worldToVoxelSpace(vec3 world) {
+    return (world - m_GridMin) / (m_GridMax - m_GridMin);
+}
+
+vec4 voxelToProjectionSpace(vec3 voxel) {
+    return vec4(voxel.xy * 2.0 - 1.0, 0.0, 1.0);
+}
+

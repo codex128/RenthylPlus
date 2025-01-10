@@ -1,0 +1,18 @@
+
+// compress each number to an unsigned half, so the gbuffer can store 8 numbers at once
+// RG: attenuated normals (3)
+// GB: specular (3)
+// A: metallic (1)
+// A: roughness (1)
+// note: might move specular.r to B channel, since it has better accuracy
+
+vec4 compressGBuffer(vec3 specular, float metallic, float roughness) {
+    uint a = packUnorm2x16(vec2(metallic, roughness));
+    return vec4(specular, a);
+}
+
+void expandGBuffer(inout vec4 gbuffer, out vec3 specular, out vec2 metallicRoughness) {
+    specular = gbuffer.xyz;
+    metallicRoughness = unpackHalf2x16(uint(gbuffer.a));
+}
+
