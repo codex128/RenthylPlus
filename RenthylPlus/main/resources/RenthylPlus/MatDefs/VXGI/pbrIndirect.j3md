@@ -1,0 +1,135 @@
+MaterialDef PBRIndirect {
+
+    MaterialParameters {
+        
+        FloatArray VXGI_LightData
+        Int VXGI_LightDataSize
+        Texture2D VXGI_LightContributionMap
+        Color VXGI_Ambient
+        Texture3D VXGI_VoxelMap
+        Vector3 VXGI_GridMin
+        Vector3 VXGI_GridMax
+        Vector2 VXGI_ScreenSize
+        Int VXGI_GridSize
+        
+        Int BoundDrawBuffer
+        Float AlphaDiscardThreshold (AlphaTestFallOff)
+        Float Metallic : 1.0
+        Float Roughness : 1.0
+        Color BaseColor : 1.0 1.0 1.0 1.0
+        Color Emissive
+        Float EmissivePower : 3.0
+        Float EmissiveIntensity : 2.0
+        Texture2D BaseColorMap
+        Texture2D MetallicMap -LINEAR
+        Texture2D RoughnessMap -LINEAR
+        Texture2D MetallicRoughnessMap -LINEAR
+        Texture2D EmissiveMap
+        Texture2D NormalMap -LINEAR
+        Float NormalScale
+        Float NormalType : -1.0
+        Boolean UseSpecGloss
+        Texture2D SpecularMap
+        Texture2D GlossinessMap
+        Texture2D SpecularGlossinessMap
+        Color Specular : 1.0 1.0 1.0 1.0
+        Float Glossiness : 1.0
+        Texture2D ParallaxMap -LINEAR
+        Boolean UseSpecularAA : true
+        Float SpecularAASigma
+        Float SpecularAAKappa
+        Boolean PackedNormalParallax
+        Float ParallaxHeight : 0.05
+        Boolean SteepParallax
+        Boolean HorizonFade
+        Texture2D LightMap
+        Float AoStrength
+        Boolean SeparateTexCoord
+        Boolean LightMapAsAOMap
+        Boolean AoPackedInMRMap
+        Int FilterMode
+        Boolean HardwareShadows
+        Texture2D ShadowMap0
+        Texture2D ShadowMap1
+        Texture2D ShadowMap2
+        Texture2D ShadowMap3
+        Texture2D ShadowMap4
+        Texture2D ShadowMap5
+        Float ShadowIntensity
+        Vector4 Splits
+        Vector2 FadeInfo
+        Matrix4 LightViewProjectionMatrix0
+        Matrix4 LightViewProjectionMatrix1
+        Matrix4 LightViewProjectionMatrix2
+        Matrix4 LightViewProjectionMatrix3
+        Matrix4 LightViewProjectionMatrix4
+        Matrix4 LightViewProjectionMatrix5   
+        Vector3 LightPos
+        Vector3 LightDir
+        Float PCFEdge
+        Float ShadowMapSize
+        Int NumberOfBones
+        Matrix4Array BoneMatrices
+        FloatArray MorphWeights
+        Int NumberOfMorphTargets
+        Int NumberOfTargetsBuffers
+        Boolean UseInstancing
+        Boolean UseVertexColor
+        Boolean BackfaceShadows : false
+        
+    }
+
+    Technique VXGI_IndirectLighting {
+    
+        VertexShader   GLSL450 GLSL430 : RenthylPlus/MatDefs/VXGI/pbrIndirect.vert
+        FragmentShader GLSL450 GLSL430 : RenthylPlus/MatDefs/VXGI/pbrIndirect.frag
+
+        WorldParameters {
+            WorldViewProjectionMatrix
+            CameraPosition
+            WorldMatrix
+            WorldNormalMatrix
+            ViewProjectionMatrix
+            ViewMatrix
+        }
+
+        Defines {
+            VXGI_LIGHT_DATA_SIZE : VXGI_LightDataSize
+            VXGI_SHADOWS : VXGI_LightContributionMap
+            BOUND_DRAW_BUFFER: BoundDrawBuffer
+            BASECOLORMAP : BaseColorMap            
+            NORMALMAP : NormalMap
+            NORMALSCALE : NormalScale
+            METALLICMAP : MetallicMap
+            ROUGHNESSMAP : RoughnessMap
+            EMISSIVEMAP : EmissiveMap
+            EMISSIVE : Emissive
+            SPECGLOSSPIPELINE : UseSpecGloss
+            PARALLAXMAP : ParallaxMap
+            NORMALMAP_PARALLAX : PackedNormalParallax
+            STEEP_PARALLAX : SteepParallax
+            LIGHTMAP : LightMap
+            SEPARATE_TEXCOORD : SeparateTexCoord
+            DISCARD_ALPHA : AlphaDiscardThreshold                        
+            NUM_BONES : NumberOfBones                        
+            INSTANCING : UseInstancing
+            USE_PACKED_MR: MetallicRoughnessMap
+            USE_PACKED_SG: SpecularGlossinessMap
+            SPECULARMAP : SpecularMap
+            SPECULAR_AA : UseSpecularAA
+            SPECULAR_AA_SCREEN_SPACE_VARIANCE : SpecularAASigma
+            SPECULAR_AA_THRESHOLD : SpecularAAKappa
+            GLOSSINESSMAP : GlossinessMap
+            NORMAL_TYPE: NormalType
+            VERTEX_COLOR : UseVertexColor
+            AO_MAP: LightMapAsAOMap
+            AO_PACKED_IN_MR_MAP : AoPackedInMRMap
+            AO_STRENGTH : AoStrength
+            NUM_MORPH_TARGETS: NumberOfMorphTargets
+            NUM_TARGETS_BUFFERS: NumberOfTargetsBuffers
+            HORIZON_FADE: HorizonFade
+        }
+        
+    }
+
+}

@@ -30,11 +30,12 @@ package codex.renthylplus.light;
 
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
-import codex.renthyl.resources.ResourceTicket;
 import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.light.LightImagePacker;
 import codex.renthyl.light.TiledRenderGrid;
 import codex.renthyl.modules.RenderPass;
+import codex.renthyl.resources.tickets.ResourceTicket;
+import codex.renthyl.resources.tickets.TicketArray;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.JmeExporter;
 import com.jme3.export.JmeImporter;
@@ -50,7 +51,6 @@ import com.jme3.texture.Texture2D;
 import com.jme3.util.BufferUtils;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -80,9 +80,9 @@ public class LightImagePass extends RenderPass {
     private final LightImagePacker packer = new LightImagePacker();
     private ResourceTicket<LightList> lights;
     private ResourceTicket<TiledRenderGrid> tileInfo;
-    private ResourceTicket<HashMap<Light, Integer>> lightShadowIndices;
-    private ResourceTicket<Texture2D>[] textures;
-    private ResourceTicket<Texture2D>[] tileTextures;
+    private ResourceTicket<Light[]> lightShadowIndices;
+    private TicketArray<Texture2D> textures;
+    private TicketArray<Texture2D> tileTextures;
     private ResourceTicket<Integer> numLights;
     private ResourceTicket<ColorRGBA> ambientColor;
     private ResourceTicket<List<LightProbe>> probes;
@@ -97,8 +97,8 @@ public class LightImagePass extends RenderPass {
         lights = addInput("Lights");
         tileInfo = addInput("TileInfo");
         lightShadowIndices = addInput("LightShadowIndices");
-        textures = addOutputGroup("Textures", 3);
-        tileTextures = addOutputGroup("TileTextures", 2);
+        textures = addOutputGroup(new TicketArray<>("Textures", 3));
+        tileTextures = addOutputGroup(new TicketArray<>("TileTextures", 2));
         numLights = addOutput("NumLights");
         ambientColor = addOutput("Ambient");
         probes = addOutput("Probes");
@@ -121,11 +121,10 @@ public class LightImagePass extends RenderPass {
             declare(lightTexDef, t);
             reserve(t);
         }
-        declare(tileDef, tileTextures[0]);
-        declare(indexDef, tileTextures[1]);
-        declare(null, numLights);
-        declare(null, ambientColor);
-        declare(null, probes);
+        // TODO: switch to using DefinedTicketArray
+        declare(tileDef, tileTextures.get(0));
+        declare(indexDef, tileTextures.get(1));
+        declarePrimitive(numLights, ambientColor, probes);
         reference(lights);
         referenceOptional(tileInfo, lightShadowIndices);
     }
@@ -133,7 +132,7 @@ public class LightImagePass extends RenderPass {
     protected void execute(FGRenderContext context) {
         LightList lightList = resources.acquire(lights);
         TiledRenderGrid grid = resources.acquireOrElse(tileInfo, null);
-        HashMap<Light, Integer> indexMap = resources.acquireOrElse(lightShadowIndices, null);
+        Light[] indexMap = resources.acquireOrElse(lightShadowIndices, null);
         Camera cam = context.getViewPort().getCamera();
         Texture2D tiles = null;
         Texture2D indices = null;
@@ -145,15 +144,15 @@ public class LightImagePass extends RenderPass {
             if (indexDef.getNumPixels() < reqPixels) {
                 indexDef.setNumPixels(reqPixels, true, true, false);
             }
-            tiles = resources.acquire(tileTextures[0]);
-            indices = resources.acquire(tileTextures[1]);
+            tiles = resources.acquire(tileTextures.get(0));
+            indices = resources.acquire(tileTextures.get(1));
         } else {
-            resources.setUndefined(tileTextures[0]);
-            resources.setUndefined(tileTextures[1]);
+            resources.setUndefined(tileTextures.get(0));
+            resources.setUndefined(tileTextures.get(1));
         }
-        packer.setTextures(resources.acquire(textures[0]),
-                           resources.acquire(textures[1]),
-                           resources.acquire(textures[2]),
+        packer.setTextures(resources.acquire(textures.get(0)),
+                           resources.acquire(textures.get(1)),
+                           resources.acquire(textures.get(2)),
                            tiles, indices);
         int n = packer.packLights(lightList, ambient, probeList, cam, grid, indexMap);
         resources.setPrimitive(numLights, n);

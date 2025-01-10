@@ -19,6 +19,7 @@ public class ShadowMap {
     private final Matrix4f projection = new Matrix4f();
     private Light light;
     private Vector2f range = new Vector2f();
+    private float split = 0f;
 
     public ShadowMap(Texture2D map) {
         this.map = map;
@@ -39,6 +40,9 @@ public class ShadowMap {
     public void setRange(float min, float max) {
         this.range.set(min, max);
     }
+    public void setSplit(float split) {
+        this.split = split;
+    }
     
     public Texture2D getMap() {
         return map;
@@ -51,6 +55,15 @@ public class ShadowMap {
     }
     public Vector2f getRange() {
         return range;
+    }
+    public Vector2f getInverseRange(Vector2f store) {
+        if (store == null) {
+            store = new Vector2f();
+        }
+        return store.set(1f/range.x, (range.y * range.x)/(range.x - range.y));
+    }
+    public float getSplit() { 
+        return split;
     }
     
 }

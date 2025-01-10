@@ -31,7 +31,7 @@ package codex.renthylplus.tests;
 import codex.renthyl.FrameGraph;
 import codex.renthylplus.RenthylPlus;
 import codex.renthyl.Renthyl;
-import codex.renthylplus.deferred.GBufferPass;
+import codex.renthylplus.deferred.DeferredGBufferPass;
 import com.jme3.input.KeyInput;
 import com.jme3.input.controls.ActionListener;
 import com.jme3.input.controls.KeyTrigger;
@@ -62,7 +62,7 @@ public class TestGBuffer extends TestApplication {
         fg.setSetting("GBuffer", 0);
         viewPort.setPipeline(fg);
         
-        GBufferPass.adaptAllMaterials(assetManager);
+        DeferredGBufferPass.adaptAllMaterials(assetManager);
         
         
         

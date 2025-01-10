@@ -1,8 +1,7 @@
 
 #import "Common/ShaderLib/GLSLCompat.glsllib"
-
-#import "Common/ShaderLib/GLSLCompat.glsllib"
 #import "RenthylPlus/ShaderLib/Projection.glsllib"
+#import "RenthylPlus/ShaderLib/Shadows.glsllib"
 
 uniform sampler2D m_SceneDepthMap;
 uniform sampler2D m_ShadowMap;
@@ -18,18 +17,8 @@ void main() {
     
     float sceneDepth = texture2D(m_SceneDepthMap, texCoord).r;
     vec3 fragPos = getPosition(texCoord, sceneDepth, m_CamViewProjectionInverse);
-    vec4 lightViewPos = m_LightViewProjectionMatrix * vec4(fragPos, 1.0);
-    vec2 lightUv = (lightViewPos.xy / lightViewPos.w + 1.0) / 2.0;
-    float depth = lightViewPos.z;
-    
-    gl_FragColor = vec4(0.0);
-    bool inside = lightUv.x >= 0.0 && lightUv.x <= 1.0 && lightUv.y >= 0.0 && lightUv.y <= 1.0;
-    if (depth >= 0.0 && (m_LightType == 0 || inside)) {
-        float shadow = texture2D(m_ShadowMap, lightUv).r;
-        depth = (1.0 / depth - m_LightRangeInverse.x) / (m_LightRangeInverse.y - m_LightRangeInverse.x);
-        if (depth <= shadow) {
-            gl_FragColor.r = 1 << m_LightIndex;
-        }
+    if (isExposedToLight(fragPos, m_ShadowMap, m_LightViewProjectionMatrix, m_LightRangeInverse, false)) {
+        gl_FragColor.r = 1 << m_LightIndex;
     }
     
 }

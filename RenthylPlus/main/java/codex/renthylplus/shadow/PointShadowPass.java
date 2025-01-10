@@ -44,15 +44,15 @@ public class PointShadowPass extends ShadowOcclusionPass<PointLight> {
     }
     
     @Override
-    protected Camera getShadowCamera(FGRenderContext context, GeometryQueue occluders, PointLight light, int index) {
+    protected Camera getShadowCamera(FGRenderContext context, Camera viewCam, GeometryQueue occluders, GeometryQueue receivers, PointLight light, int index) {
         Camera c = shadowCams[index];
-        //if (radii[index] != light.getRadius() || !c.getLocation().equals(light.getPosition())) {
+        if (radii[index] != light.getRadius() || !c.getLocation().equals(light.getPosition())) {
             radii[index] = light.getRadius();
             c.setFrustumPerspective(90, 1, 0.1f, light.getRadius());
-            c.setLocation(light.getPosition());
+            c.setLocation(light.getPosition().clone());
             c.update();
             c.updateViewProjection();
-        //}
+        }
         return c;
     }
     @Override

@@ -24,7 +24,7 @@ void main() {
     #ifdef NUM_BONES
         Skinning_Compute(modelSpacePos);
     #endif
-
+    
     gl_Position = TransformWorldViewProjection(modelSpacePos);
     texCoord = inTexCoord;
     

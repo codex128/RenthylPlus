@@ -30,9 +30,10 @@ package codex.renthylplus.deferred;
 
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
-import codex.renthyl.resources.ResourceTicket;
 import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.modules.RenderPass;
+import codex.renthyl.resources.tickets.ResourceTicket;
+import codex.renthyl.resources.tickets.TicketArray;
 import codex.renthyl.util.ProbeRenderUtils;
 import com.jme3.asset.AssetManager;
 import com.jme3.export.InputCapsule;
@@ -47,7 +48,6 @@ import com.jme3.light.PointLight;
 import com.jme3.light.SpotLight;
 import com.jme3.material.Material;
 import com.jme3.material.TechniqueDef;
-import com.jme3.material.logic.DefaultTechniqueDefLogic;
 import com.jme3.material.logic.TechniqueDefLogic;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector2f;
@@ -126,10 +126,11 @@ public class DeferredPass extends RenderPass implements TechniqueDefLogic {
     private ResourceTicket<ColorRGBA> ambient;
     private ResourceTicket<List<LightProbe>> probes;
     private ResourceTicket<Texture2D> lightContribution;
+    private TicketArray<Texture2D> gbuffers, lightTextures, tileTextures;
     private final TextureDef<Texture2D> colorDef = TextureDef.texture2D();
+    private final Texture2D[] lightTexArray = new Texture2D[3];
+    private final Texture2D[] tileTexArray = new Texture2D[2];
     private Material material;
-    private final Texture2D[] lightTextures = new Texture2D[3];
-    private final Texture2D[] tileTextures = new Texture2D[2];
     private Texture2D lightContributionMap;
     private final ColorRGBA ambientColor = new ColorRGBA();
     private List<LightProbe> probeList;
@@ -141,10 +142,10 @@ public class DeferredPass extends RenderPass implements TechniqueDefLogic {
     
     @Override
     protected void initialize(FrameGraph frameGraph) {
-        addInputGroup("GBufferData", 5);
+        gbuffers = addInputGroup(new TicketArray<>("GBufferData", 5));
         lights = addInput("Lights");
-        addInputGroup("LightTextures", 3);
-        addInputGroup("TileTextures", 2);
+        lightTextures = addInputGroup(new TicketArray<>("LightTextures", lightTexArray.length));
+        tileTextures = addInputGroup(new TicketArray<>("TileTextures", tileTexArray.length));
         numLights = addInput("NumLights");
         ambient = addInput("Ambient");
         probes = addInput("Probes");
@@ -162,10 +163,10 @@ public class DeferredPass extends RenderPass implements TechniqueDefLogic {
         colorDef.setSize(context.getWidth(), context.getHeight());
         declare(colorDef, outColor);
         reserve(outColor);
-        reference(getGroupArray("GBufferData"));
+        reference(gbuffers);
         referenceOptional(lights, numLights, ambient, probes);
-        referenceOptional(getGroupArray("LightTextures"));
-        referenceOptional(getGroupArray("TileTextures"));
+        referenceOptional(lightTextures);
+        referenceOptional(tileTextures);
         referenceOptional(lightContribution);
     }
     @Override
@@ -179,9 +180,9 @@ public class DeferredPass extends RenderPass implements TechniqueDefLogic {
         context.getRenderer().setBackgroundColor(ColorRGBA.BlackNoAlpha);
         
         // apply gbuffer textures
-        ResourceTicket<Texture2D>[] gbuffers = getGroupArray("GBufferData");
-        for (int i = 0; i < gbuffers.length; i++) {
-            material.setTexture("GBuffer"+i, resources.acquire(gbuffers[i]));
+        int gbufIndex = 0;
+        for (ResourceTicket<Texture2D> t : gbuffers) {
+            material.setTexture("GBuffer" + gbufIndex++, resources.acquire(t));
         }
         
         // setup technique
@@ -191,20 +192,20 @@ public class DeferredPass extends RenderPass implements TechniqueDefLogic {
         Defines.config(active);
         
         // render
-        acquireArrayOrElse("LightTextures", lightTextures, null);
+        acquireArrayOrElse(lightTextures, lightTexArray, null);
         lightContributionMap = resources.acquireOrElse(lightContribution, null);
         material.setTexture("LightContributionMap", lightContributionMap);
         material.setVector2("PixelSize", new Vector2f(1f/context.getWidth(), 1f/context.getHeight()));
-        if (lightTextures[0] == null) {
+        if (lightTexArray[0] == null) {
             context.getScreen().render(context.getRenderManager(), material, resources.acquire(lights));
         } else {
-            for (int i = 1; i <= lightTextures.length; i++) {
-                material.setTexture("LightTex"+i, lightTextures[i-1]);
+            for (int i = 1; i <= lightTexArray.length; i++) {
+                material.setTexture("LightTex"+i, lightTexArray[i-1]);
             }
             // get textures used for screenspace light tiling
-            acquireArrayOrElse("TileTextures", tileTextures, null);
-            material.setTexture("Tiles", tileTextures[0]);
-            material.setTexture("LightIndex", tileTextures[1]);
+            acquireArrayOrElse(tileTextures, tileTexArray, null);
+            material.setTexture("Tiles", tileTexArray[0]);
+            material.setTexture("LightIndex", tileTexArray[1]);
             context.renderFullscreen(material);
         }
         active.setLogic(null);
@@ -218,7 +219,7 @@ public class DeferredPass extends RenderPass implements TechniqueDefLogic {
             EnumSet<Caps> rendererCaps, LightList lights, DefineList defines) {
         TechniqueDef active = material.getActiveTechnique().getDef();
         Defines defs = Defines.get(active);
-        if (lightTextures[0] == null) {
+        if (lightTexArray[0] == null) {
             ColorRGBA amb = resources.acquireOrElse(ambient, null);
             if (amb == null) {
                 probeList = localProbeList;
@@ -237,7 +238,7 @@ public class DeferredPass extends RenderPass implements TechniqueDefLogic {
             probeList = resources.acquire(probes);
             defines.set(defs.useTextures, true);
             defines.set(defs.numLights, resources.acquire(numLights));
-            if (tileTextures[0] != null) {
+            if (tileTexArray[0] != null) {
                 defines.set(defs.useTiles, true);
             }
         }
@@ -253,7 +254,7 @@ public class DeferredPass extends RenderPass implements TechniqueDefLogic {
             LightList lights, Material.BindUnits lastBindUnits) {
         Renderer renderer = rm.getRenderer();
         injectShaderGlobals(rm, shader, lastBindUnits.textureUnit);
-        if (lightTextures[0] == null) {
+        if (lightTexArray[0] == null) {
             injectLightBuffers(shader, lights);
         } else {
             injectLightTextures(shader);
@@ -336,7 +337,7 @@ public class DeferredPass extends RenderPass implements TechniqueDefLogic {
                     writeVectorToUniform(data, sl.getDirection(), sl.getPackedAngleCos(), i++);
                     break;
                 default:
-                    throw new UnsupportedOperationException("Light "+type+" not supported.");
+                    throw new UnsupportedOperationException("Light " + type + " not supported.");
             }
         }
         // just in case, fill in the remaining elements
@@ -345,11 +346,11 @@ public class DeferredPass extends RenderPass implements TechniqueDefLogic {
         }
     }
     private void injectLightTextures(Shader shader) {
-        int w = lightTextures[0].getImage().getWidth();
+        int w = lightTexArray[0].getImage().getWidth();
         shader.getUniform("m_LightTexInv").setValue(VarType.Float, 1f/w);
-        if (tileTextures[0] != null) {
-            w = tileTextures[1].getImage().getWidth();
-            int h = tileTextures[1].getImage().getHeight();
+        if (tileTexArray[0] != null) {
+            w = tileTexArray[1].getImage().getWidth();
+            int h = tileTexArray[1].getImage().getHeight();
             shader.getUniform("m_LightIndexSize").setValue(VarType.Vector3, new Vector3f(w-0.5f, 1f/w, 1f/h));
         }
     }
