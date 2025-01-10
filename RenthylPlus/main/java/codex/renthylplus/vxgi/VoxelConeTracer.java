@@ -7,12 +7,11 @@ package codex.renthylplus.vxgi;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.client.GraphSource;
 import codex.renthyl.modules.ModuleLocator;
-import codex.renthyl.modules.NewConnectable;
 import codex.renthyl.modules.RenderContainer;
 import codex.renthyl.modules.RenderModule;
 import codex.renthyl.modules.cache.CacheRead;
 import codex.renthyl.modules.cache.CacheWrite;
-import codex.renthyl.resources.tickets.ArbitraryTicketList;
+import codex.renthyl.resources.tickets.DynamicTicketList;
 import codex.renthyl.resources.tickets.TicketSelector;
 import codex.renthylplus.shadow.ShadowMap;
 import com.jme3.bounding.BoundingBox;
@@ -26,46 +25,55 @@ public class VoxelConeTracer extends RenderContainer<RenderModule> {
     
     private static final GraphSource<String> voxelCacheKey =
             GraphSource.value(VoxelConeTracer.class.getName() + ":TemporalVoxels");
-    private static final String VOXEL_ENV_SETUP = "VoxelEnvironmentSetup";
-    private static final String VOXEL_SHADOW_COMPOSER = "VoxelShadowComposer";
     
-    private ArbitraryTicketList<ShadowMap> shadowMaps;
-    private boolean ticketsCreated = false;
+    private DynamicTicketList<ShadowMap> shadowMaps;
     
     public VoxelConeTracer() {
         
     }
     
+    @Override
+    public void initializeModule(FrameGraph frameGraph) {
+        super.initializeModule(frameGraph);
+        addInput("Geometry");
+        addInput("Depth");
+        addInput("Lights");
+        addInput("LightContribution");
+        shadowMaps = addInputGroup(new DynamicTicketList<>("ShadowMaps"));
+        addOutput("Result");
+    }
+    
     /**
-     * Creates a VoxelConeTracer module with all necessary internal functions.
+     * Setups this container will all necessary modules and connections.
      * 
      * @return 
      */
-    public static VoxelConeTracer create() {
+    public VoxelConeTracer create() {
         
-        VoxelConeTracer vct = new VoxelConeTracer();
-        vct.createTickets();
+        if (!isAssigned()) {
+            throw new IllegalStateException();
+        }
         
-        CacheRead<Texture3D> voxelRead = vct.add(new CacheRead<>(Texture3D.class, voxelCacheKey));
-        VoxelEnvSetupPass voxelEnv = vct.add(new VoxelEnvSetupPass());
-        VoxelShadowComposerPass voxShadows = vct.add(new VoxelShadowComposerPass());
-        DirectLightingPass direct = vct.add(new DirectLightingPass());
-        VoxelizationPass voxels = vct.add(new VoxelizationPass());
-        IndirectLightingPass indirect = vct.add(new IndirectLightingPass());
-        CacheWrite voxelWrite = vct.add(new CacheWrite(voxelCacheKey));
+        CacheRead<Texture3D> voxelRead = add(new CacheRead<>(Texture3D.class, voxelCacheKey));
+        VoxelEnvSetupPass voxelEnv = add(new VoxelEnvSetupPass());
+        VoxelShadowComposerPass voxShadows = add(new VoxelShadowComposerPass());
+        DirectLightingPass direct = add(new DirectLightingPass());
+        VoxelizationPass voxels = add(new VoxelizationPass());
+        IndirectLightingPass indirect = add(new IndirectLightingPass());
+        CacheWrite voxelWrite = add(new CacheWrite(voxelCacheKey));
         
-        voxelEnv.setName(VOXEL_ENV_SETUP);
-        voxShadows.setName(VOXEL_SHADOW_COMPOSER);
+        voxelEnv.setName("VoxelEnvironment");
+        voxShadows.setName("VoxelShadowComposer");
         
         voxShadows.makeInput(voxelEnv, "GridSize", "GridSize");
         voxShadows.makeInput(voxelEnv, "Bounds", "Bounds");
         
-        vct.makeInternalInput("Geometry", "Geometry", direct);
-        vct.makeInternalInput("Lights", "Lights", direct);
-        vct.makeInternalInput("LightContribution", "LightContribution", direct);
+        makeInternalInput("Geometry", "Geometry", direct);
+        makeInternalInput("Lights", "Lights", direct);
+        makeInternalInput("LightContribution", "LightContribution", direct);
         
-        vct.makeInternalInput("Geometry", "Geometry", voxels);
-        vct.makeInternalInput("Lights", "Lights", voxels);
+        makeInternalInput("Geometry", "Geometry", voxels);
+        makeInternalInput("Lights", "Lights", voxels);
         voxels.makeInput(voxShadows, "LightContribution", "LightContribution");
         voxels.makeInput(voxelEnv, "GridSize", "GridSize");
         voxels.makeInput(voxelEnv, "Bounds", "Bounds");
@@ -74,43 +82,24 @@ public class VoxelConeTracer extends RenderContainer<RenderModule> {
         indirect.makeInput(direct, "Color", "SceneColor");
         indirect.makeInput(direct, "Depth", "SceneDepth");
         indirect.getInputGroup("Material").makeInput(direct.getOutputGroup("Material"),
-                TicketSelector.All, TicketSelector.All);
+                TicketSelector.NamesMatch, TicketSelector.All);
         indirect.makeInput(voxels, "Voxels", "Voxels");
         indirect.makeInput(voxelEnv, "Bounds", "Bounds");
         indirect.makeInput(voxelEnv, "GridSize", "GridSize");
-        vct.makeInternalOutput(indirect, "Result", "Result");
+        makeInternalOutput(indirect, "Result", "Result");
         
         voxelWrite.makeInput(voxels, "Voxels", CacheWrite.INPUT);
+        shadowMaps.registerTargetList(voxShadows.getInputGroup(DynamicTicketList.class, "ShadowMaps"));
         
-        return vct;
+        return this;
         
-    }
-    
-    @Override
-    public void initModule(FrameGraph frameGraph) {
-        createTickets();
-        shadowMaps.registerTarget(get(ModuleLocator.by(VoxelShadowComposerPass.class, VOXEL_SHADOW_COMPOSER))
-                .getInputGroup(ArbitraryTicketList.class, "ShadowMaps"));
-        super.initModule(frameGraph);
-    }
-    
-    protected void createTickets() {
-        if (!ticketsCreated) {
-            addInput("Geometry");
-            addInput("Depth");
-            addInput("Lights");
-            addInput("LightContribution");
-            shadowMaps = addInputGroup(new ArbitraryTicketList<>("ShadowMaps"));
-            addOutput("Result");
-        }
-        ticketsCreated = false;
     }
     
     public void setVoxelGridSize(GraphSource<Integer> gridSize) {
-        get(ModuleLocator.by(VoxelEnvSetupPass.class, VOXEL_ENV_SETUP)).setGridSize(gridSize);
+        get(ModuleLocator.by(VoxelEnvSetupPass.class, "VoxelEnvironment")).setGridSize(gridSize);
     }
     public void setVoxelBounds(GraphSource<BoundingBox> bounds) {
-        get(ModuleLocator.by(VoxelEnvSetupPass.class, VOXEL_ENV_SETUP)).setBounds(bounds);
+        get(ModuleLocator.by(VoxelEnvSetupPass.class, "VoxelEnvironment")).setBounds(bounds);
     }
     
 }

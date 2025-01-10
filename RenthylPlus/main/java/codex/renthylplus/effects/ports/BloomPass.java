@@ -70,8 +70,8 @@ public class BloomPass extends JmeFilterPass {
     
     private ResourceTicket<GeometryQueue> geometry;
     private ResourceTicket<Texture2D> objectGlow;
-    private final ResourceTicket<Texture2D> geometryResult = new ResourceTicket<>();
-    private final ResourceTicket<Texture2D> geometryDepth = new ResourceTicket<>();
+    private final ResourceTicket<Texture2D> geometryResult = new ResourceTicket<>("_geometry_result");
+    private final ResourceTicket<Texture2D> geometryDepth = new ResourceTicket<>("_geometry_depth");
     private final TextureDef<Texture2D> colorDef = TextureDef.texture2D(Image.Format.RGBA16F);
     private final TextureDef<Texture2D> depthDef = TextureDef.texture2D(Image.Format.Depth);
     private Texture2D glowMap;

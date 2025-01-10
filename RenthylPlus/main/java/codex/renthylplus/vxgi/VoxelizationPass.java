@@ -128,7 +128,7 @@ public class VoxelizationPass extends RenderPass implements GeometryRenderHandle
         material.setParam("LightData", VarType.FloatArray, lightArray);
         material.setInt("LightDataSize", lightArray.length);
         material.setTexture("LightContributionMap", resources.acquireOrElse(lightContribution, null));
-        material.setColor("AmbientLight", resources.acquire(ambient));
+        material.setColor("AmbientLight", resources.acquireOrElse(ambient, ColorRGBA.Black));
         material.setParam("VoxelMap", VarType.Image3D, voxelImg);
         material.setVector3("GridMin", boundMin);
         material.setVector3("GridMax", boundMax);

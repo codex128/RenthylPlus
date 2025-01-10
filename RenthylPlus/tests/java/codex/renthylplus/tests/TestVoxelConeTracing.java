@@ -8,33 +8,20 @@ import codex.jmecompute.UniversalShaderLoader;
 import codex.jmecompute.opengl.GLComputeManager;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.Renthyl;
-import codex.renthyl.client.GraphSetting;
 import codex.renthyl.client.GraphSource;
 import codex.renthyl.modules.ControlRenderPass;
-import codex.renthyl.modules.Junction;
 import codex.renthyl.modules.OutputPass;
-import codex.renthyl.modules.cache.CacheRead;
-import codex.renthyl.modules.cache.CacheWrite;
 import codex.renthyl.modules.geometry.GeometryDepthPass;
 import codex.renthyl.modules.geometry.SceneEnqueuePass;
-import codex.renthyl.util.IndexSwitch;
+import codex.renthyl.resources.tickets.DynamicTicketList;
+import codex.renthyl.resources.tickets.TicketSelector;
 import codex.renthylplus.shadow.ShadowComposerPass;
-import codex.renthylplus.shadow.ShadowMapViewPass;
-import codex.renthylplus.shadow.SpotShadowPass;
-import codex.renthylplus.vxgi.DirectLightingPass;
+import codex.renthylplus.shadow.ShadowManager;
 import codex.renthylplus.vxgi.LightArrayPass;
 import codex.renthylplus.vxgi.LightGatherPass;
-import codex.renthylplus.vxgi.VoxelDebugSlicePass;
-import codex.renthylplus.vxgi.VoxelEnvSetupPass;
-import codex.renthylplus.vxgi.IndirectLightingPass;
-import codex.renthylplus.vxgi.VoxelShadowComposerPass;
-import codex.renthylplus.vxgi.VoxelVisualizerPass;
-import codex.renthylplus.vxgi.VoxelizationPass;
+import codex.renthylplus.vxgi.VoxelConeTracer;
 import com.github.stephengold.wrench.LwjglAssetLoader;
 import com.jme3.app.SimpleApplication;
-import com.jme3.bounding.BoundingBox;
-import com.jme3.input.KeyInput;
-import com.jme3.input.controls.KeyTrigger;
 import com.jme3.light.PointLight;
 import com.jme3.light.SpotLight;
 import com.jme3.material.Material;
@@ -45,7 +32,6 @@ import com.jme3.scene.Geometry;
 import com.jme3.scene.Spatial;
 import com.jme3.scene.shape.Box;
 import com.jme3.system.AppSettings;
-import com.jme3.texture.Texture3D;
 
 /**
  *
@@ -130,94 +116,44 @@ public class TestVoxelConeTracing extends SimpleApplication {
         FrameGraph fg = new FrameGraph(assetManager);
         viewPort.setPipeline(fg);
         
-        GraphSetting<String> voxelCacheKey = new GraphSetting<>("TemporalVoxels", "TemporalVoxels");
-        
         fg.add(new ControlRenderPass());
-        CacheRead<Texture3D> voxelRead = fg.add(new CacheRead<>(Texture3D.class, voxelCacheKey));
         SceneEnqueuePass enqueue = fg.add(SceneEnqueuePass.withSingleQueue());
         GeometryDepthPass depth = fg.add(new GeometryDepthPass());
-        SpotShadowPass spotShadows = fg.add(new SpotShadowPass(1024));
-        VoxelEnvSetupPass voxelEnv = fg.add(new VoxelEnvSetupPass());
+        ShadowManager shadowMaps = fg.add(new ShadowManager());
         ShadowComposerPass shadows = fg.add(new ShadowComposerPass());
-        VoxelShadowComposerPass voxShadows = fg.add(new VoxelShadowComposerPass());
         LightGatherPass lightGather = fg.add(new LightGatherPass());
         LightArrayPass lightArray = fg.add(new LightArrayPass());
-        DirectLightingPass direct = fg.add(new DirectLightingPass());
-        VoxelizationPass voxels = fg.add(new VoxelizationPass());
-        VoxelVisualizerPass vis = fg.add(new VoxelVisualizerPass());
-        VoxelDebugSlicePass sliceDebug = fg.add(new VoxelDebugSlicePass());
-        IndirectLightingPass indirect = fg.add(new IndirectLightingPass());
-        Junction outJunct = fg.add(new Junction(6, 1));
+        VoxelConeTracer vct = fg.add(new VoxelConeTracer()).create();
         OutputPass out = fg.add(new OutputPass());
-        ShadowMapViewPass shadowDebug = fg.add(new ShadowMapViewPass());
-        CacheWrite voxelWrite = fg.add(new CacheWrite(voxelCacheKey));
         
         // depth pre-pass
-        depth.makeInput(enqueue, "Default", "Geometry");
+        depth.makeInput(enqueue, SceneEnqueuePass.SINGLE_QUEUE, "Geometry");
         
-        // calculate screen space and voxel space shadows
-        spotShadows.makeInput(enqueue, "Default", "Occluders");
+        // calculate screen shadows
+        shadowMaps.makeInput(enqueue, SceneEnqueuePass.SINGLE_QUEUE, "Occluders");
+        shadowMaps.makeInput(enqueue, SceneEnqueuePass.SINGLE_QUEUE, "Receivers");
         shadows.makeInput(depth, "Depth", "ReceiverDepth");
-        shadows.makeGroupInputToList(spotShadows, "ShadowMaps", "ShadowMaps");
-        voxShadows.makeInput(voxelEnv, "GridSize", "GridSize");
-        voxShadows.makeInput(voxelEnv, "Bounds", "Bounds");
-        voxShadows.makeGroupInputToList(spotShadows, "ShadowMaps", "ShadowMaps");
+        shadowMaps.getOutputGroup(DynamicTicketList.class, "ShadowMaps").registerTargetList(
+                shadows.getInputGroup(DynamicTicketList.class, "ShadowMaps"));
         
-        // pack lights into arrays
+        // lights
         lightArray.makeInput(lightGather, "Lights", "Lights");
-        lightArray.makeInput(voxShadows, "LightShadowIndices", "Shadows");
+        lightArray.makeInput(shadows, "LightShadowIndices", "Shadows");
         
-        // calculate direct lighting
-        direct.makeInput(enqueue, "Default", "Geometry");
-        direct.makeInput(lightArray, "LightArray", "Lights");
-        direct.makeInput(shadows, "LightContribution", "LightContribution");
+        // voxel cone tracing
+        vct.makeInput(enqueue, SceneEnqueuePass.SINGLE_QUEUE, "Geometry");
+        vct.makeInput(depth, "Depth", "Depth");
+        vct.makeInput(lightArray, "LightArray", "Lights");
+        vct.makeInput(shadows, "LightContribution", "LightContribution");
+        vct.getInputGroup("ShadowMaps").makeInput(shadowMaps.getOutputGroup("ShadowMaps"),
+                TicketSelector.All, TicketSelector.All);
+        shadowMaps.getOutputGroup(DynamicTicketList.class, "ShadowMaps").registerTargetList(
+                vct.getInputGroup(DynamicTicketList.class, "ShadowMaps"));
         
-        // voxelize the scene
-        voxels.makeInput(enqueue, "Default", "Geometry");
-        voxels.makeInput(lightArray, "LightArray", "Lights");
-        voxels.makeInput(lightArray, "Ambient", "Ambient");
-        voxels.makeInput(voxShadows, "LightContribution", "LightContribution");
-        voxels.makeInput(voxelEnv, "GridSize", "GridSize");
-        voxels.makeInput(voxelEnv, "Bounds", "Bounds");
-        voxels.makeInput(voxelRead, CacheRead.OUTPUT, "TemporalVoxels");
+        out.makeInput(vct, "Result", "Color");
+        //out.makeInput(depth, "Depth", "Color");
         
-        // debug
-        //sliceDebug.makeInput(voxels, "Voxels", "Voxels");
-        sliceDebug.makeInput(voxShadows, "LightContribution", "Voxels");
-        vis.makeInput(voxels, "Voxels", "Voxels");
-        //vis.makeInput(voxShadows, "LightContribution", "Voxels");
-        vis.makeInput(voxelEnv, "Bounds", "Bounds");
-        vis.makeInput(enqueue, "Default", "Geometry");
-        
-        // calculate indirect
-        indirect.makeInput(direct, "Color", "SceneColor");
-        indirect.makeInput(direct, "Depth", "SceneDepth");
-        indirect.makeInput(direct, "Diffuse", "Diffuse");
-        indirect.makeInput(direct, "Position", "Position");
-        indirect.makeInput(direct, "Normals", "Normals");
-        indirect.makeInput(direct, "Material", "Material");
-        indirect.makeInput(voxels, "Voxels", "Voxels");
-        indirect.makeInput(voxelEnv, "Bounds", "Bounds");
-        indirect.makeInput(voxelEnv, "GridSize", "GridSize");
-        
-        // display result
-        outJunct.makeInput(indirect, "Result", Junction.getInput(0));
-        outJunct.makeInput(shadows, "LightContribution", Junction.getInput(1));
-        outJunct.makeInput(vis, "Color", Junction.getInput(2));
-        outJunct.makeInput(sliceDebug, "Result", Junction.getInput(3));
-        outJunct.makeInput(depth, "Depth", Junction.getInput(4));
-        outJunct.makeInput(direct, "Color", Junction.getInput(5));
-        out.makeInput(outJunct, Junction.getOutput(), "Color");
-        //shadowDebug.makeInput(spotShadows, "ShadowMaps[0]", "ShadowMap");
-        
-        // cache voxels for temporal lighting
-        voxelWrite.makeInput(voxels, "Voxels", CacheWrite.INPUT);
-        
-        //enqueue.setFrustumCulling(false);
-        voxelEnv.setBounds(GraphSource.value(new BoundingBox(Vector3f.ZERO, 40, 40, 40)));
-        voxelEnv.setGridSize(GraphSource.value(128));
-        new IndexSwitch(inputManager, new KeyTrigger(KeyInput.KEY_SPACE)).setJunction(outJunct);
-        spotShadows.setLightSource(GraphSource.value(spot));
+        shadowMaps.addSpotLight(GraphSource.value(spot), 1024);
         
     }
     @Override

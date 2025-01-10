@@ -3,7 +3,7 @@ MaterialDef Voxelize {
     MaterialParameters {
         
         // voxels
-        Texture3D VoxelMap
+        Image3D VoxelMap
         
         // temporal
         Texture3D TemporalVoxelMap

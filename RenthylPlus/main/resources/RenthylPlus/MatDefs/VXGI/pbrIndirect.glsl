@@ -87,12 +87,14 @@ void main() {
         vec4 baseColor = texelFetch(ColorMap, texel, 0);
         vec4 indirect = vec4(atomicR, atomicG, atomicB, 0.0) * vec4(diffuse, 0.0) * IndirectFactor * expansion.y;
         imageStore(Target, texel, indirect + baseColor);
+        //imageStore(Target, texel, indirect);
         //imageStore(Target, texel, color.rgbb);
         //imageStore(Target, texel, vec4(wPosition * 0.01, 1.0));
         //imageStore(Target, texel, vec4(diffuse, 1.0));
         //imageStore(Target, texel, indirect);
         //imageStore(Target, texel, vec4(1.0 - depth, 0.0, 0.0, 1.0));
         //imageStore(Target, texel, vec4(direction, 1.0));
+        //imageStore(Target, texel, vec4(1.0, 0.0, 0.0, 1.0));
     }
     
 }

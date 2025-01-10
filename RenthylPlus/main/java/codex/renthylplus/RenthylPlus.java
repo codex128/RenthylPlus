@@ -96,19 +96,12 @@ public class RenthylPlus {
         QueueMergePass merge = fg.add(new RenderThread(async)).add(new QueueMergePass());
         OutputGeometryPass geometry = fg.add(new OutputGeometryPass());
         
-//        mergeForShadows.makeInput(enqueue, "Opaque", "Queues[0]");
-//        mergeForShadows.makeInput(enqueue, "Sky", "Queues[1]");
-//        mergeForShadows.makeInput(enqueue, "Transparent", "Queues[2]");
-//        mergeForShadows.makeInput(enqueue, "Gui", "Queues[3]");
-//        mergeForShadows.makeInput(enqueue, "Translucent", "Queues[4]");
-        mergeForShadows.makeInput(enqueue, TicketSelector.All, TicketSelector.All);
+        mergeForShadows.makeInput(enqueue.getMainOutputGroup(), TicketSelector.All, TicketSelector.All);
         
         shadowQueue.makeInput(mergeForShadows, "Result", "Geometry");
         lightShadows.makeInput(shadowQueue, "Occluders", "Occluders");
         lightShadows2.makeInput(shadowQueue, "Occluders", "Occluders");
         shadowCompose.makeInput(shadowQueue, "Receivers", "Receivers");
-        //shadowCompose.makeGroupInputToList(lightShadows, "ShadowMaps", "ShadowMaps");
-        //shadowCompose.makeGroupInputToList(lightShadows2, "ShadowMaps", "ShadowMaps");
         shadowCompose.getInputGroup("ShadowMaps").makeInput(
                 lightShadows.getOutputGroup("ShadowMaps"), TicketSelector.All, TicketSelector.All);
         shadowCompose.getInputGroup("ShadowMaps").makeInput(
@@ -123,13 +116,10 @@ public class RenthylPlus {
         lightContrDebug.setName("LightContributionDebug");
         lightShadows.setLightSource(new GraphSetting<>("PointLightShadowCaster", null));
         lightShadows2.setLightSource(new GraphSetting<>("PointLightShadowCaster2", null));
-        
-        //shadowOut.makeInput(shadowCompose, "LightContribution", Attribute.INPUT);
 
         gbuf.makeInput(enqueue, "Opaque", "Geometry");
         
         gbufDebugTarget.setIndexSource(new GraphSetting("GBufferDebug", -1));
-        //gbufDebugTarget.makeGroupInput(gbuf, "GBufferData", Junction.getInput());
         gbufDebugTarget.makeInput(gbuf.getOutputGroup("GBufferData"), TicketSelector.All, TicketSelector.All);
         
         gbufDebug.setName("GBufferDebug");
@@ -139,43 +129,32 @@ public class RenthylPlus {
         tileInfoAttr.setSource(tileInfo);
         
         GraphSetting<Integer> tileToggle = new GraphSetting("UseLightTiling", -1);
-        //tileJunct1.makeInput(tileInfoAttr, Attribute.OUTPUT, Junction.getInput(0));
-        tileJunct1.makeInput(tileInfoAttr, TicketSelector.name(Attribute.OUTPUT), TicketSelector.All);
+        tileJunct1.makeInput(tileInfoAttr.getMainOutputGroup(), TicketSelector.name(Attribute.OUTPUT), TicketSelector.All);
         tileJunct1.setIndexSource(tileToggle);
         
         lightImg.makeInput(enqueue, "OpaqueLights", "Lights");
         lightImg.makeInput(tileJunct1, Junction.OUTPUT, "TileInfo");
         
         GraphSetting<Integer> lightPackMethod = new GraphSetting("UseLightTextures", -1);
-        //lightJunct.makeGroupInput(lightImg, "Textures", Junction.getInput(0), 0, 0, 3);
         lightJunct.makeInput(lightImg.getOutputGroup("Textures"),
                 TicketSelector.All, TicketSelector.before(3), 0);
         lightJunct.makeInput(lightImg.getMainOutputGroup(),
-                TicketSelector.anyName("NumLights", "Ambient", "Probes"), TicketSelector.atOrAfter(3), 0);
-        //lightJunct.makeInput(lightImg, "Ambient", Junction.getInput(0, 4));
-        //lightJunct.makeInput(lightImg, "Probes", Junction.getInput(0, 5));
+                TicketSelector.names("NumLights", "Ambient", "Probes"), TicketSelector.atOrAfter(3), 0);
         lightJunct.setIndexSource(lightPackMethod);
         
-        //tileJunct2.makeGroupInput(lightImg, "TileTextures", Junction.getInput(0));
         tileJunct2.makeInput(lightImg.getOutputGroup("TileTextures"),
                 TicketSelector.All, TicketSelector.All, 0);
         tileJunct2.setIndexSource(tileToggle);
         
-        //deferred.makeGroupInput(gbuf, "GBufferData", "GBufferData");
         deferred.getInputGroup("GBufferData").makeInput(gbuf.getOutputGroup("GBufferData"),
                 TicketSelector.All, TicketSelector.All);
         deferred.makeInput(enqueue, "OpaqueLights", "Lights");
-        //deferred.makeGroupInput(lightJunct, Junction.getOutput(), "LightTextures", 0, 0, 3);
-        deferred.getInputGroup("LightTextures").makeInput(lightJunct.getOutputGroup(),
+        deferred.getInputGroup("LightTextures").makeInput(lightJunct.getMainOutputGroup(),
                 TicketSelector.before(3), TicketSelector.All);
-        deferred.makeInput(lightJunct.getOutputGroup(),
-                TicketSelector.atOrAfter(3), TicketSelector.anyName("NumLights", "Ambient", "Probes"));
-        //deferred.makeInput(lightJunct, Junction.getOutput(3), "NumLights");
-        //deferred.makeInput(lightJunct, Junction.getOutput(4), "Ambient");
-        //deferred.makeInput(lightJunct, Junction.getOutput(5), "Probes");
-        deferred.getInputGroup("TileTextures").makeInput(tileJunct2.getOutputGroup(),
+        deferred.makeInput(lightJunct.getMainOutputGroup(),
+                TicketSelector.atOrAfter(3), TicketSelector.names("NumLights", "Ambient", "Probes"));
+        deferred.getInputGroup("TileTextures").makeInput(tileJunct2.getMainOutputGroup(),
                 TicketSelector.All, TicketSelector.All);
-        //deferred.makeGroupInput(tileJunct2, Junction.getOutput(), "TileTextures");
         
         defOut.makeInput(deferred, "Color", "Color");
         defOut.makeInput(gbuf, "GBufferData[4]", "Depth");
@@ -184,7 +163,7 @@ public class RenthylPlus {
 //        merge.makeInput(enqueue, "Transparent", "Queues[1]");
 //        merge.makeInput(enqueue, "Gui", "Queues[2]");
 //        merge.makeInput(enqueue, "Translucent", "Queues[3]");
-        merge.makeInput(enqueue, TicketSelector.anyName("Sky", "Transparent", "Gui", "Translucent"), TicketSelector.All);
+        merge.makeInput(enqueue.getMainOutputGroup(), TicketSelector.names("Sky", "Transparent", "Gui", "Translucent"), TicketSelector.All);
         
         geometry.makeInput(merge, "Result", "Geometry");
         
@@ -210,7 +189,7 @@ public class RenthylPlus {
             Junction junct = fg.add(new Junction());
             OutputPass out = fg.add(new OutputPass());
             
-            merge.makeInput(enqueue, TicketSelector.All, TicketSelector.All);
+            merge.makeInput(enqueue.getMainOutputGroup(), TicketSelector.All, TicketSelector.All);
             
             gbuf.makeInput(merge, "Result", "Geometry");
             

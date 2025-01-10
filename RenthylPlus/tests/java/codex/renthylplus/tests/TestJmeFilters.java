@@ -18,12 +18,15 @@ import codex.renthyl.modules.ControlRenderPass;
 import codex.renthyl.modules.Junction;
 import codex.renthyl.modules.OutputPass;
 import codex.renthyl.modules.RenderContainer;
+import codex.renthyl.modules.AbstractRenderModule;
 import codex.renthyl.modules.RenderModule;
 import codex.renthyl.modules.RenderPass;
 import codex.renthyl.modules.geometry.GeometryPass;
 import codex.renthyl.modules.geometry.QueueMergePass;
 import codex.renthyl.modules.geometry.SceneEnqueuePass;
-import codex.renthyl.resources.ResourceTicket;
+import codex.renthyl.modules.protocol.FilterProtocol;
+import codex.renthyl.resources.tickets.ResourceTicket;
+import codex.renthyl.resources.tickets.TicketSelector;
 import codex.renthyl.util.GeometryRenderHandler;
 import codex.renthylplus.effects.FilterChain;
 import codex.renthylplus.effects.ports.*;
@@ -55,7 +58,7 @@ import com.jme3.texture.Texture2D;
 public class TestJmeFilters extends SimpleApplication {
     
     private GeometryPass geometry;
-    private RenderContainer<RenderModule> fpp;
+    private RenderContainer<AbstractRenderModule> fpp;
     private JunctionCycleSource activeFilterSource, outputColor;
     private BitmapText filterLabel, formatLabel;
     private int colorFormat = 0;
@@ -95,12 +98,12 @@ public class TestJmeFilters extends SimpleApplication {
         
         fg.add(new ControlRenderPass());
         SceneEnqueuePass enqueue = fg.add(SceneEnqueuePass.withLegacyQueues());
-        QueueMergePass merge = fg.add(new QueueMergePass(5));
+        QueueMergePass merge = fg.add(new QueueMergePass());
         geometry = fg.add(new GeometryPass());
         NormalPass normals = fg.add(new NormalPass());
         fpp = fg.add(new RenderContainer<>());
         TextureSliderPass slider = fg.add(new TextureSliderPass());
-        Junction colorOut = fg.add(new Junction(3));
+        Junction colorOut = fg.add(new Junction());
         OutputPass out = fg.add(new OutputPass());
         
         fpp.addInput("Color");
@@ -128,15 +131,15 @@ public class TestJmeFilters extends SimpleApplication {
         SSRPass ssr = fpp.add(new SSRPass());
         fpp.makeInternalInput("Normals", "Normals", ssr);
         
-        FilterChain<RenderModule> stack = fpp.add(new FilterChain<>());
-        stack.addInput("Normals");
-        fpp.makeInternalInput("Normals", "Normals", stack);
-        CartoonEdgePass cartoon2 = stack.add(new CartoonEdgePass());
+        FilterChain<FilterProtocol> chain = fpp.add(new FilterChain());
+        chain.addInput("Normals");
+        fpp.makeInternalInput("Normals", "Normals", chain);
+        CartoonEdgePass cartoon2 = chain.add(new CartoonEdgePass());
         cartoon2.setEdgeColor(ColorRGBA.Green);
-        stack.makeInternalInput("Normals", "Normals", cartoon2);
-        stack.add(new FXAAPass());
+        chain.makeInternalInput("Normals", "Normals", cartoon2);
+        chain.add(new FXAAPass());
         
-        Junction activeFilter = fpp.add(new Junction(fpp.size()));
+        Junction activeFilter = fpp.add(new Junction());
         activeFilterSource = new JunctionCycleSource(activeFilter);
         int i = 0;
         for (RenderModule m : fpp) {
@@ -145,7 +148,7 @@ public class TestJmeFilters extends SimpleApplication {
             }
             fpp.makeInternalInput("Color", "Color", m);
             fpp.makeInternalInput("Depth", "Depth", m);
-            activeFilter.makeInput(m, "Result", Junction.getInput(i++));
+            activeFilter.makeInput(m.getMainOutputGroup(), TicketSelector.name("Result"), TicketSelector.All);
         }
         
         merge.makeInput(enqueue, "Opaque", "Queues[0]");
@@ -153,6 +156,7 @@ public class TestJmeFilters extends SimpleApplication {
         merge.makeInput(enqueue, "Transparent", "Queues[2]");
         merge.makeInput(enqueue, "Gui", "Queues[3]");
         merge.makeInput(enqueue, "Translucent", "Queues[4]");
+        merge.makeInput(enqueue.getMainOutputGroup(), TicketSelector.All, TicketSelector.All);
         
         geometry.makeInput(merge, "Result", "Geometry");
         geometry.getColorDef().setFormatFlexible(false);
@@ -162,18 +166,19 @@ public class TestJmeFilters extends SimpleApplication {
         fpp.makeInput(geometry, "Depth", "Depth");
         fpp.makeInput(normals, "Result", "Normals");
         fpp.makeInput(merge, "Result", "Geometry");
-        fpp.makeInternalOutput(activeFilter, Junction.getOutput(), "Result");
+        fpp.getMainOutputGroup().makeInput(activeFilter.getMainOutputGroup(),
+                TicketSelector.name(Junction.OUTPUT), TicketSelector.name("Result"));
         
         slider.setDivide(new GraphSetting<>("SliderDivide", 0.5f));
         slider.makeInput(geometry, "Color", "Texture1");
         slider.makeInput(fpp, "Result", "Texture2");
         
         outputColor = new JunctionCycleSource(colorOut);
-        colorOut.makeInput(slider, "Result", Junction.getInput(0));
-        colorOut.makeInput(geometry, "Color", Junction.getInput(1));
-        colorOut.makeInput(normals, "Result", Junction.getInput(2));
+        colorOut.makeInput(slider.getMainOutputGroup(), TicketSelector.name("Result"), TicketSelector.First);
+        colorOut.makeInput(geometry.getMainOutputGroup(), TicketSelector.name("Color"), TicketSelector.First);
+        colorOut.makeInput(normals.getMainOutputGroup(), TicketSelector.name("Result"), TicketSelector.First);
         
-        out.makeInput(colorOut, Junction.getOutput(), "Color");
+        out.makeInput(colorOut, Junction.OUTPUT, "Color");
         out.makeInput(geometry, "Depth", "Depth");
         
     }
@@ -267,7 +272,7 @@ public class TestJmeFilters extends SimpleApplication {
         
         private ResourceTicket<GeometryQueue> geometry;
         private ResourceTicket<Texture2D> result;
-        private final ResourceTicket<Texture2D> depth = new ResourceTicket<>();
+        private final ResourceTicket<Texture2D> depth = new ResourceTicket<>("_depth");
         private final TextureDef<Texture2D> resultDef = TextureDef.texture2D(Image.Format.RGBA8);
         private final TextureDef<Texture2D> depthDef = TextureDef.texture2D(Image.Format.Depth);
         private Material material;

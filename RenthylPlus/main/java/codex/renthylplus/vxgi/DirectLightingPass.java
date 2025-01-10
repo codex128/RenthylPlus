@@ -62,7 +62,7 @@ public class DirectLightingPass extends RenderPass implements GeometryRenderHand
         materials = addOutputGroup(new DefinedTicketList<>("Material"));
         materials.add("Diffuse", TextureDef.texture2D(Image.Format.RGBA16F));
         materials.add("Position", TextureDef.texture2D(Image.Format.RGBA16F));
-        materials.add("Normal", TextureDef.texture2D(Image.Format.RGBA16F));
+        materials.add("Normals", TextureDef.texture2D(Image.Format.RGBA16F));
         materials.add("Material", TextureDef.texture2D(Image.Format.RGBA32F));
         assetManager = frameGraph.getAssetManager();
     }

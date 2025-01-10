@@ -12,7 +12,7 @@ import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.modules.RenderPass;
-import codex.renthyl.resources.tickets.ArbitraryTicketList;
+import codex.renthyl.resources.tickets.DynamicTicketList;
 import codex.renthyl.resources.tickets.ResourceTicket;
 import codex.renthylplus.shadow.ShadowMap;
 import com.jme3.bounding.BoundingBox;
@@ -40,7 +40,7 @@ public class VoxelShadowComposerPass extends RenderPass {
     private ResourceTicket<BoundingBox> voxelBounds;
     private ResourceTicket<Texture3D> voxelLight;
     private ResourceTicket<Light[]> lightShadowIndices;
-    private ArbitraryTicketList<ShadowMap> shadowMaps;
+    private DynamicTicketList<ShadowMap> shadowMaps;
     private final TextureDef<Texture3D> lightDef = TextureDef.texture3D(Image.Format.RGBA32F);
     private final LinkedList<ShadowMap> shadowMapList = new LinkedList<>();
     private final Vector3f gridMin = new Vector3f();
@@ -53,7 +53,7 @@ public class VoxelShadowComposerPass extends RenderPass {
     protected void initialize(FrameGraph frameGraph) {
         gridSize = addInput("GridSize");
         voxelBounds = addInput("Bounds");
-        shadowMaps = addInputGroup(new ArbitraryTicketList<>("ShadowMaps"));
+        shadowMaps = addInputGroup(new DynamicTicketList<>("ShadowMaps"));
         voxelLight = addOutput("LightContribution");
         lightShadowIndices = addOutput("LightShadowIndices");
         lightDef.setMagFilter(Texture.MagFilter.Nearest);

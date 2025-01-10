@@ -9,8 +9,10 @@ import codex.renthyl.FrameGraph;
 import codex.renthyl.definitions.TextureDef;
 import codex.renthyl.draw.RenderMode;
 import codex.renthyl.modules.RenderPass;
+import codex.renthyl.modules.protocol.FilterProtocol;
 import codex.renthyl.resources.tickets.ResourceTicket;
 import codex.renthyl.resources.tickets.TicketSelector;
+import codex.renthyl.resources.tickets.TicketSignature;
 import com.jme3.export.InputCapsule;
 import com.jme3.export.OutputCapsule;
 import com.jme3.material.Material;
@@ -24,7 +26,7 @@ import java.util.ArrayList;
  *
  * @author codex
  */
-public abstract class JmeFilterPass extends RenderPass {
+public abstract class JmeFilterPass extends RenderPass implements FilterProtocol {
 
     protected ResourceTicket<Texture2D> sceneColor, sceneDepth;
     protected ResourceTicket<Texture2D> result;
@@ -168,6 +170,18 @@ public abstract class JmeFilterPass extends RenderPass {
     protected void read(InputCapsule in) throws IOException {
         super.read(in);
         setEnabled(in.readBoolean("enabled", true));
+    }
+    @Override
+    public TicketSignature getRenderedSceneColor() {
+        return new TicketSignature(true, TicketSelector.name("Color"));
+    }
+    @Override
+    public TicketSignature getRenderedSceneDepth() {
+        return new TicketSignature(true, TicketSelector.name("Depth"));
+    }
+    @Override
+    public TicketSignature getFilteredResult() {
+        return new TicketSignature(false, TicketSelector.name("Result"));
     }
     
     protected abstract void init(FrameGraph frameGraph);

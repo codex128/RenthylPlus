@@ -29,7 +29,7 @@ public class SpotShadowPass extends ShadowOcclusionPass<SpotLight> {
     }
 
     @Override
-    protected Camera getShadowCamera(FGRenderContext context, GeometryQueue occluders, SpotLight light, int index) {
+    protected Camera getShadowCamera(FGRenderContext context, Camera viewCam, GeometryQueue occluders, GeometryQueue receivers, SpotLight light, int index) {
         
         if (range != light.getSpotRange() || outerAngle != light.getSpotOuterAngle()
                 || !shadowCam.getLocation().equals(light.getPosition()) || !direction.equals(light.getDirection())) {

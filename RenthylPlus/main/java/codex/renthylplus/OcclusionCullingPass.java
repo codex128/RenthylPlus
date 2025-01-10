@@ -35,7 +35,7 @@ public class OcclusionCullingPass extends RenderPass {
 
     private ResourceTicket<GeometryQueue> geometry;
     private ResourceTicket<GeometryQueue> visible, invisible;
-    private final ResourceTicket<Texture2D> depth = new ResourceTicket<>();
+    private final ResourceTicket<Texture2D> depth = new ResourceTicket<>("_depth");
     private final TextureDef<Texture2D> depthDef = TextureDef.texture2D(Image.Format.Depth);
     private final GeometryQueue visibleQueue = new GeometryQueue(NULL_COMPARATOR);
     private final GeometryQueue invisibleQueue = new GeometryQueue(NULL_COMPARATOR);

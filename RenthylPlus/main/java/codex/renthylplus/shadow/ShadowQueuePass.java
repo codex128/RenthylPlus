@@ -41,10 +41,10 @@ public class ShadowQueuePass extends RenderPass {
         GeometryQueue source = resources.acquire(geometry);
         int numGeoms = source.getNumGeometries();
         if (occluderQueue == null) {
-            occluderQueue = new GeometryQueue(new OpaqueComparator(), numGeoms);
+            occluderQueue = new GeometryQueue(new OpaqueComparator(), false, numGeoms);
         }
         if (receiverQueue == null) {
-            receiverQueue = new GeometryQueue(new OpaqueComparator(), numGeoms);
+            receiverQueue = new GeometryQueue(new OpaqueComparator(), false, numGeoms);
         }
         for (Geometry g : source) {
             ShadowMode mode = SpatialWorldParam.getWorldParameter(

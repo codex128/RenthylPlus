@@ -35,7 +35,7 @@ public class TestOcclusionCulling extends SimpleApplication {
         
         FrameGraph fg = new FrameGraph(assetManager);
         SceneEnqueuePass enqueue = fg.add(SceneEnqueuePass.withLegacyQueues());
-        QueueMergePass merge = fg.add(new QueueMergePass(5));
+        QueueMergePass merge = fg.add(new QueueMergePass());
         GeometryPass geometry = fg.add(new GeometryPass());
         OutputPass out = fg.add(new OutputPass());
         CacheWrite write = fg.add(new CacheWrite());

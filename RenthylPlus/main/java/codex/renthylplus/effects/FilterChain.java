@@ -5,21 +5,21 @@
 package codex.renthylplus.effects;
 
 import codex.renthyl.modules.RenderContainer;
-import codex.renthyl.modules.RenderModule;
-import codex.renthyl.resources.tickets.ResourceTicket;
+import codex.renthyl.modules.protocol.FilterProtocol;
 import codex.renthyl.resources.tickets.TicketSelector;
-import com.jme3.texture.Texture2D;
+import codex.renthyl.resources.tickets.TicketSignature;
 
 /**
  * 
  * @author codex
  * @param <R>
  */
-public class FilterChain <R extends RenderModule> extends RenderContainer<R> {
+public class FilterChain <R extends FilterProtocol> extends RenderContainer<R> implements FilterProtocol {
     
-    private static final TicketSelector color = TicketSelector.name("Color");
-    private static final TicketSelector depth = TicketSelector.name("Depth");
-    private static final TicketSelector result = TicketSelector.name("Result");
+    private static final TicketSignature<TicketSelector.NameSelector>
+            color = new TicketSignature<>(true, TicketSelector.name("Color")),
+            depth = new TicketSignature<>(true, TicketSelector.name("Depth")),
+            result = new TicketSignature<>(false, TicketSelector.name("Result"));
     
     public FilterChain() {
         super();
@@ -31,10 +31,10 @@ public class FilterChain <R extends RenderModule> extends RenderContainer<R> {
     }
     
     private void addTickets() {
-        addInput("Color");
-        addInput("Depth");
-        addOutput("Result");
-        getMainOutputGroup().makeInput(getMainInputGroup(), color, result);
+        addInput(color.getSelector().getName());
+        addInput(depth.getSelector().getName());
+        addOutput(result.getSelector().getName());
+        makeInput(this, color, result);
     }
     
     @Override
@@ -42,51 +42,46 @@ public class FilterChain <R extends RenderModule> extends RenderContainer<R> {
         super.add(module, index);
         if (index > 0) {
             R prev = queue.get(index - 1);
-            module.getMainInputGroup().makeInput(prev.getMainOutputGroup(), result, color);
+            module.makeInput(prev, prev.getFilteredResult(), module.getRenderedSceneColor());
         } else {
-            makeInternalInput(color, color, module);
+            module.makeInput(this, color, module.getRenderedSceneColor());
         }
         if (index < queue.size()-1) {
             R next = queue.get(index + 1);
-            next.getMainInputGroup().makeInput(module.getMainOutputGroup(), result, color);
+            next.makeInput(module, module.getFilteredResult(), next.getRenderedSceneColor());
         } else {
-            makeInternalOutput(module, result, result);
+            makeInput(module, module.getFilteredResult(), result);
         }
-        if (module.getMainInputGroup().select(depth) != null) {
-            makeInternalInput(depth, depth, module);
-        }
+        module.makeInput(this, depth, module.getRenderedSceneDepth());
         return module;
     }
-    
-    @Override
-    public boolean remove(R module) {
-        int i = indexOf(module);
-        if (i >= 0) {
-            removeAndJoin(i);
-            return true;
-        }
-        return false;
-    }
-    
     @Override
     public R remove(int i) {
-        return removeAndJoin(i);
-    }
-    
-    private R removeAndJoin(int i) {
         R prev = (i > 0 ? queue.get(i - 1) : null);
         R next = (i < queue.size() ? queue.get(i + 1) : null);
         R removed = super.remove(i);
         if (prev != null && next == null) {
-            makeInternalOutput(prev, result, result);
+            makeInput(prev, prev.getFilteredResult(), result);
         } else if (prev == null && next != null) {
-            makeInternalInput(color, color, next);
+            next.makeInput(this, color, next.getRenderedSceneColor());
         } else if (prev != null && next != null) {
-            next.getMainInputGroup().makeInput(prev.getMainOutputGroup(), result, color);
+            next.makeInput(prev, prev.getFilteredResult(), next.getRenderedSceneColor());
         } else {
-            getMainOutputGroup().makeInput(getMainInputGroup(), color, result);
+            makeInput(this, color, result);
         }
         return removed;
+    }
+    @Override
+    public TicketSignature getRenderedSceneColor() {
+        return color;
+    }
+    @Override
+    public TicketSignature getRenderedSceneDepth() {
+        return depth;
+    }
+    @Override
+    public TicketSignature getFilteredResult() {
+        return result;
     }
     
 }

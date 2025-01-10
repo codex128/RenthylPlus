@@ -7,8 +7,9 @@ package codex.renthylplus.shadow;
 import codex.renthyl.FGRenderContext;
 import codex.renthyl.FrameGraph;
 import codex.renthyl.definitions.TextureDef;
+import codex.renthyl.draw.RenderMode;
 import codex.renthyl.modules.RenderPass;
-import codex.renthyl.resources.tickets.ArbitraryTicketList;
+import codex.renthyl.resources.tickets.DynamicTicketList;
 import codex.renthyl.resources.tickets.ResourceTicket;
 import com.jme3.light.Light;
 import com.jme3.material.Material;
@@ -30,7 +31,7 @@ public class ShadowComposerPass extends RenderPass {
     private ResourceTicket<Texture2D> recieverDepth;
     private ResourceTicket<Texture2D> lightContribution;
     private ResourceTicket<Light[]> lightShadowIndices;
-    private ArbitraryTicketList<ShadowMap> shadowMaps;
+    private DynamicTicketList<ShadowMap> shadowMaps;
     private final TextureDef<Texture2D> contributionDef = TextureDef.texture2D();
     private final RenderState renderState = new RenderState();
     private Light[] indexMap;
@@ -40,7 +41,7 @@ public class ShadowComposerPass extends RenderPass {
     @Override
     protected void initialize(FrameGraph frameGraph) {
         recieverDepth = addInput("ReceiverDepth");
-        shadowMaps = addInputGroup(new ArbitraryTicketList<>("ShadowMaps"));
+        shadowMaps = addInputGroup(new DynamicTicketList<>("ShadowMaps"));
         lightContribution = addOutput("LightContribution");
         lightShadowIndices = addOutput("LightShadowIndices");
         contributionDef.setFormat(Image.Format.R32F);
@@ -69,9 +70,9 @@ public class ShadowComposerPass extends RenderPass {
         // setup render parameters
         FrameBuffer composerFb = getFrameBuffer("Composer", w, h, 1);
         resources.acquireColorTarget(composerFb, lightContribution);
-        context.getRenderer().setFrameBuffer(composerFb);
-        context.getRenderer().clearBuffers(true, true, true);
-        context.getRenderManager().setForcedRenderState(renderState);
+        context.registerMode(RenderMode.frameBuffer(composerFb));
+        context.clearBuffers();
+        context.registerMode(RenderMode.forcedRenderState(renderState));
         material.setTexture("SceneDepthMap", resources.acquire(recieverDepth));
         material.setMatrix4("CamViewProjectionInverse", context.getViewPort().getCamera().getViewProjectionMatrix().invert());
         
