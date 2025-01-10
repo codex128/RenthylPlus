@@ -26,7 +26,7 @@ dependencies {
     implementation "org.jmonkeyengine:jme3-lwjgl3:$jmeVer"
     implementation "com.github.codex128:Renthyl:$renthylVer"
     implementation "com.github.codex128:Boost:$boostVer"
-    implementation 'com.github.codex128:JMECompute:$jmecomputeVer'
+    implementation 'com.github.codex128:JMECompute:v1.0.0'
 }
 
 task copyJavadoc(dependsOn: javadoc) {
