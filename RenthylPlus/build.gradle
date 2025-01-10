@@ -18,6 +18,7 @@ project.ext {
     jmeVer = '3.8.0-alpha2'
     renthylVer = 'v1.2.4'
     boostVer = '1.2.3'
+    jmecomputeVer = 'v1.0.0'
 }
 
 dependencies {
@@ -25,6 +26,7 @@ dependencies {
     implementation "org.jmonkeyengine:jme3-lwjgl3:$jmeVer"
     implementation "com.github.codex128:Renthyl:$renthylVer"
     implementation "com.github.codex128:Boost:$boostVer"
+    implementation 'com.github.codex128:JMECompute:$jmecomputeVer'
 }
 
 task copyJavadoc(dependsOn: javadoc) {
