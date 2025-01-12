@@ -51,7 +51,7 @@ public class IndirectLightingPass extends RenderPass {
     private ResourceTicket<BoundingBox> voxelBounds;
     private ResourceTicket<Integer> gridSize;
     private ResourceTicket<Texture2D> result;
-    private final TextureDef<Texture2D> resultDef = TextureDef.texture2D(Image.Format.RGBA16F);
+    private final TextureDef<Texture2D> resultDef = TextureDef.texture2D(Image.Format.RGBA32F);
     private final Matrix4f camInverse = new Matrix4f();
     private final Vector3f gridMin = new Vector3f();
     private final Vector3f gridMax = new Vector3f();
@@ -60,6 +60,7 @@ public class IndirectLightingPass extends RenderPass {
     private GLComputeShader shader;
     private GraphSource<Float> traceQuality;
     private GraphSource<Vector2f> specularAngleRange;
+    private float time = 0;
     
     @Override
     protected void initialize(FrameGraph frameGraph) {
@@ -118,9 +119,12 @@ public class IndirectLightingPass extends RenderPass {
         shader.set("GridSize", ArgType.Int, resources.acquire(gridSize));
         shader.set("TraceQuality", ArgType.Float, GraphSource.get(traceQuality, 1f, context));
         shader.set("SpecularAngleRange", ArgType.Vector2, GraphSource.get(specularAngleRange, SPEC_RANGE, context));
-        shader.set("IndirectFactor", ArgType.Float, 0.5f);
+        shader.set("IndirectFactor", ArgType.Float, 2.0f);
         shader.set("Target", ArgType.Image, resultImg);
+        shader.set("Time", ArgType.Float, time);
         shader.execute(work.setGlobal(w, h, 1).setLocal(tracePattern.length/3 + 1, 1, 1));
+        
+        time += context.getTpf();
         
     }
     @Override

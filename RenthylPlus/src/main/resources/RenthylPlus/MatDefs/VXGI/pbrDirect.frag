@@ -112,8 +112,7 @@ void main(){
     vec2 newTexCoord;
     vec3 viewDir = normalize(g_CameraPosition - wPosition);
     
-    // WARNING: normal flipped
-    vec3 norm = -normalize(wNormal);
+    vec3 norm = normalize(wNormal);
     #if defined(NORMALMAP) || defined(PARALLAXMAP)
         vec3 tan = normalize(wTangent.xyz);
         mat3 tbnMat = mat3(tan, wTangent.w * cross( (norm), (tan)), norm);
@@ -327,11 +326,10 @@ void main(){
     #endif
     outScene.a = alpha;
     
-    // WARNING: normal flipped
     outDiffuse = diffuseColor;
     outPosition = vec4(wPosition, 0.0);
     //outDiffuse = compressGBuffer(diffuseColor.rgb, wPosition);
-    outNormal = vec4(normalize(mix(wNormal, -normal, 0.0)), 0.0);
+    outNormal = vec4(normalize(mix(wNormal, normal, 0.0)), 0.0);
     outMaterial = compressGBuffer(specularColor.rgb, Metallic, Roughness);
    
 }

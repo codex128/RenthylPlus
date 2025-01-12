@@ -60,6 +60,7 @@ public class VoxelConeTracer extends RenderContainer<RenderModule> {
         DirectLightingPass direct = add(new DirectLightingPass());
         VoxelizationPass voxels = add(new VoxelizationPass());
         IndirectLightingPass indirect = add(new IndirectLightingPass());
+        VoxelVisualizerPass vis = add(new VoxelVisualizerPass());
         CacheWrite voxelWrite = add(new CacheWrite(voxelCacheKey));
         
         voxelEnv.setName("VoxelEnvironment");
@@ -86,10 +87,17 @@ public class VoxelConeTracer extends RenderContainer<RenderModule> {
         indirect.makeInput(voxels, "Voxels", "Voxels");
         indirect.makeInput(voxelEnv, "Bounds", "Bounds");
         indirect.makeInput(voxelEnv, "GridSize", "GridSize");
-        makeInternalOutput(indirect, "Result", "Result");
+        
+        vis.makeInput(voxels, "Voxels", "Voxels");
+        //vis.makeInput(voxShadows, "LightContribution", "Voxels");
+        vis.makeInput(getMainInputGroup(), TicketSelector.name("Geometry"), TicketSelector.NamesMatch);
+        vis.makeInput(voxelEnv, "Bounds", "Bounds");
         
         voxelWrite.makeInput(voxels, "Voxels", CacheWrite.INPUT);
         shadowMaps.registerTargetList(voxShadows.getInputGroup(DynamicTicketList.class, "ShadowMaps"));
+        
+        getMainOutputGroup().makeInput(indirect.getMainOutputGroup(), "Result", "Result");
+        //getMainOutputGroup().makeInput(vis.getMainOutputGroup(), "Color", "Result");
         
         return this;
         

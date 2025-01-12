@@ -34,7 +34,7 @@ void main() {
     int result = 0;
     vec3 texCoord = vec3(gl_WorkGroupID) / vec3(gl_NumWorkGroups);
     vec3 voxSize = (GridMax - GridMin) / vec3(imageSize(VoxelLightMap));
-    vec3 wPos = ((GridMax - GridMin) / vec3(gl_NumWorkGroups)) * vec3(gl_WorkGroupID) + GridMin /*+ voxSize*0.5*/;
+    vec3 wPos = ((GridMax - GridMin) / vec3(gl_NumWorkGroups)) * vec3(gl_WorkGroupID) + GridMin + voxSize*0.5;
     mat4 mat = LightMatrices[batch];
     vec2 range = InverseRanges[batch].xy;
     vec4 lightViewPos = mat * vec4(wPos, 1.0);
@@ -43,7 +43,7 @@ void main() {
     float shadow = textureLod(ShadowMap, lightUv.xy, 0.0).r;
     if (depth >= 0.0 && lightUv.x >= 0.0 && lightUv.x <= 1.0 && lightUv.y >= 0.0 && lightUv.y <= 1.0) {
         //depth = linearizeDepth(depth, range);
-        if (depth - 0.01 <= shadow) {
+        if (depth - 0.001 <= shadow) {
             result = 1 << LightIndices[batch];
         }
     }

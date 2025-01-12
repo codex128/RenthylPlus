@@ -19,7 +19,8 @@ void main() {
     result += texelFetch(VoxelMap, upper + ivec3(1, 0, 1), SourceLevel);
     result += texelFetch(VoxelMap, upper + ivec3(0, 1, 1), SourceLevel);
     result += texelFetch(VoxelMap, upper + ivec3(1, 1, 1), SourceLevel);
-    imageStore(TargetLevel, lower, result * 0.125);
+    result *= 0.125;
+    imageStore(TargetLevel, lower, result);
     
 }
 

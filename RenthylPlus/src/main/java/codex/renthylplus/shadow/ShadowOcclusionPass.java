@@ -55,6 +55,7 @@ public abstract class ShadowOcclusionPass <T extends Light> extends RenderPass i
         renderState.setColorWrite(false);
         renderState.setDepthWrite(true);
         renderState.setDepthTest(true);
+        //renderState.setFaceCullMode(RenderState.FaceCullMode.Front);
     }
     
     @Override

@@ -145,8 +145,8 @@ void main() {
     // temporal multibounce
     #ifdef TEMPORAL
         vec3 sampleDirBias = normalize(g_CameraPosition - wPosition);
-        vec3 indirect = approximatePositionIndirectVXGI(wPosition, sampleDirBias, 1.0, g_Time);
-        result.rgb += indirect * diffuseColor.rgb * m_Attenuation;
+        vec4 indirect = approximatePositionIndirectVXGI(wPosition, sampleDirBias, 1.0, g_Time);
+        result.rgb += indirect.rgb * diffuseColor.rgb * m_Attenuation;
     #endif
     
     // this will likely produce flickering
@@ -158,10 +158,11 @@ void main() {
     prev.rgb += result.rgb;
     prev.a += 1.0;*/
     
-    result.a *= 1.f / 255.f;
-    vec4 prev = imageLoad(m_VoxelMap, voxIndex);
-    vec3 avg = (prev.rgb * prev.a + result.rgb * result.a) / (prev.a + result.a);
-    result = vec4(avg, result.a + result.a);
+    //result.a *= 1.f / 255.f;
+    //vec4 prev = imageLoad(m_VoxelMap, voxIndex);
+    //vec3 avg = (prev.rgb * prev.a + result.rgb * result.a) / (prev.a + result.a);
+    //result = vec4(avg, result.a + result.a);
+    //result.a = 1000.0;
     imageStore(m_VoxelMap, voxIndex, result);
    
 }

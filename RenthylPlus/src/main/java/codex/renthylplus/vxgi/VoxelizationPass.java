@@ -24,6 +24,7 @@ import com.jme3.material.Material;
 import com.jme3.material.RenderState;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
+import com.jme3.math.Vector4f;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.Spatial;
 import com.jme3.shader.VarType;
@@ -58,8 +59,9 @@ public class VoxelizationPass extends RenderPass implements GeometryRenderHandle
     private final BoundingBox bound = new BoundingBox();
     private final Vector3f boundMin = new Vector3f();
     private final Vector3f boundMax = new Vector3f();
-    private TextureImage voxelImg;
+    private TextureImage voxelImg, clearImg;
     private Material material;
+    private GLComputeShader clear;
     private GLComputeShader mipmapper;
     private HashSet<Integer> mipsGenerated = new HashSet<>();
     
@@ -74,6 +76,8 @@ public class VoxelizationPass extends RenderPass implements GeometryRenderHandle
         temporalVoxels = addInput("TemporalVoxels");
         voxels = addOutput("Voxels");
         renderTarget = addOutput("ScreenSpaceResult");
+        clear = UniversalShaderLoader.loadOpenGLCompute(frameGraph.getAssetManager(),
+                "RenthylPlus/MatDefs/VXGI/voxelAssign.glsl", Glsl.V430);
         mipmapper = UniversalShaderLoader.loadOpenGLCompute(frameGraph.getAssetManager(),
                 "RenthylPlus/MatDefs/VXGI/voxelMipmap.glsl", Glsl.V450);
         material = new Material(frameGraph.getAssetManager(), "RenthylPlus/MatDefs/VXGI/voxelize.j3md");
@@ -82,7 +86,7 @@ public class VoxelizationPass extends RenderPass implements GeometryRenderHandle
         rs.setDepthWrite(false);
         rs.setFaceCullMode(RenderState.FaceCullMode.Off);
         voxelDef.setMagFilter(Texture.MagFilter.Bilinear);
-        voxelDef.setMinFilter(Texture.MinFilter.Trilinear); // trilinear minification generates mipmaps
+        voxelDef.setMinFilter(Texture.MinFilter.Trilinear);
         voxelDef.setWrap(Texture.WrapMode.EdgeClamp);
     }
     @Override
@@ -123,6 +127,11 @@ public class VoxelizationPass extends RenderPass implements GeometryRenderHandle
             voxelImg.setTexture(voxelMap);
         }
         
+        // clear the voxel grid
+        clear.set("VoxelMap", ArgType.Image, voxelImg);
+        clear.set("Value", ArgType.Vector4, Vector4f.ZERO);
+        clear.execute(new WorkSize(n).shiftToLocal(2));
+        
         // setup material
         float[] lightArray = resources.acquire(lights);
         material.setParam("LightData", VarType.FloatArray, lightArray);
@@ -133,10 +142,10 @@ public class VoxelizationPass extends RenderPass implements GeometryRenderHandle
         material.setVector3("GridMin", boundMin);
         material.setVector3("GridMax", boundMax);
         material.setInt("GridSize", n);
-        material.setTexture("TemporalVoxelMap", resources.acquireOrElse(temporalVoxels, null));
+        //material.setTexture("TemporalVoxelMap", resources.acquireOrElse(temporalVoxels, null));
         context.registerMode(RenderMode.forcedMaterial(material));
         
-        // rasterize geometries into the voxel grid without frustum culling
+        // rasterize geometries into the voxel grid
         resources.acquire(geometry).render(context, this);
         
         // generate mipmap levels
@@ -179,7 +188,8 @@ public class VoxelizationPass extends RenderPass implements GeometryRenderHandle
     public Visibility evaluateSpatialVisibility(FGRenderContext context, Spatial spatial, Visibility parent, boolean gui) {
         Spatial.CullHint hint = spatial.getCullHint();
         BoundingVolume volume = spatial.getWorldBound();
-        return Visibility.get(hint == Spatial.CullHint.Never || (hint != Spatial.CullHint.Always && bound.intersects(volume)), true);
+        return Visibility.get(hint == Spatial.CullHint.Never
+                || (hint != Spatial.CullHint.Always && bound.intersects(volume)), true);
     }
     
     private boolean transferParam(Geometry g, VarType type, String paramName, Object defVal) {

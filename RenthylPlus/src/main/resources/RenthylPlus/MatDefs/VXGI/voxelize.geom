@@ -26,16 +26,16 @@ void transformVertex(vec3 n, uint i) {
     vec3 wSwizzle;
     if (n.x > n.y && n.x > n.z) {
         // x major
-        wSwizzle = vec3(p.y, p.z, 0.0);
+        wSwizzle = vec3(p.yz, 0.0);
     } else if (n.y > n.z) {
         // y major
-        wSwizzle = vec3(p.x, p.z, 0.0);
+        wSwizzle = vec3(p.xz, 0.0);
     } else {
         // z major
-        wSwizzle = vec3(p.x, p.y, 0.0);
+        wSwizzle = vec3(p.xy, 0.0);
     }
     gl_Position = worldToProjection(wSwizzle);
-    wPosition = gl_in[i].gl_Position.xyz;
+    wPosition = p.xyz;
     vPosition = (wPosition - m_GridMin) / (m_GridMax - m_GridMin);
     wNormal = wNorm[i];
     texCoord = uv[i];

@@ -21,27 +21,30 @@ import codex.renthylplus.vxgi.LightArrayPass;
 import codex.renthylplus.vxgi.LightGatherPass;
 import codex.renthylplus.vxgi.VoxelConeTracer;
 import com.github.stephengold.wrench.LwjglAssetLoader;
+import com.jme3.app.DetailedProfilerState;
 import com.jme3.app.SimpleApplication;
-import com.jme3.light.PointLight;
+import com.jme3.bounding.BoundingBox;
+import com.jme3.input.KeyInput;
+import com.jme3.input.controls.AnalogListener;
+import com.jme3.input.controls.KeyTrigger;
 import com.jme3.light.SpotLight;
-import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.FastMath;
 import com.jme3.math.Vector3f;
-import com.jme3.scene.Geometry;
+import com.jme3.scene.SceneGraphIterator;
 import com.jme3.scene.Spatial;
-import com.jme3.scene.shape.Box;
 import com.jme3.system.AppSettings;
 
 /**
  *
  * @author codex
  */
-public class TestVoxelConeTracing extends SimpleApplication {
+public class TestVoxelConeTracing extends SimpleApplication implements AnalogListener {
     
     private int frame = 0;
-    private final int numLights = 0;
     private SpotLight spot;
+    private Spatial meshLight;
+    private final float moveSpeed = 4f;
     
     public static void main(String[] args) {
         TestVoxelConeTracing app = new TestVoxelConeTracing();
@@ -65,52 +68,37 @@ public class TestVoxelConeTracing extends SimpleApplication {
                 "3ds", "3mf", "blend", "bvh", "dae", "fbx", "glb", "gltf",
                 "lwo", "meshxml", "mesh.xml", "obj", "ply", "stl");
         
-        for (int i = 0; i < 0; i++) {
-            Geometry g = new Geometry("box", new Box(5, 5, 5));
-            g.setLocalTranslation(FastMath.rand.nextFloat(-20, 20), FastMath.rand.nextFloat(-20, 20), FastMath.rand.nextFloat(-20, 20));
-            Material m = new Material(assetManager, "Common/MatDefs/Light/PBRLighting.j3md");
-            m.setColor("BaseColor", ColorRGBA.randomColor());
-            m.setFloat("Metallic", 0.5f);
-            m.setFloat("Roughness", 0f);
-            g.setMaterial(m);
-            rootNode.attachChild(g);
+        Spatial scene = assetManager.loadModel("Models/gi-test.gltf");
+        //scene.setLocalTranslation(0, 0, -6);
+        rootNode.attachChild(scene);
+        for (Spatial s : new SceneGraphIterator(scene)) {
+            System.out.println(s.getName());
+            for (String k : s.getUserDataKeys()) {
+                System.out.println("  " + k);
+            }
+            if (s.getName().equals("LightCubeMesh")) {
+                meshLight = s;
+                break;
+            }
         }
-        
-        Spatial temple = assetManager.loadModel("Models/temple.gltf");
-        temple.setLocalScale(40f);
-//        for (Spatial s : new SceneGraphIterator(temple)) {
-//            if (s instanceof Geometry) {
-//                Material m = ((Geometry)s).getMaterial();
-//                m.setFloat("Metallic", 0.5f);
-//                m.setFloat("Roughness", 0.3f);
-//            }
-//        }
-        rootNode.attachChild(temple);
+        if (meshLight == null) {
+            throw new NullPointerException("Could not locate mesh light.");
+        }
         
         spot = new SpotLight();
         spot.setPosition(new Vector3f(10, 10, 10));
         spot.setDirection(new Vector3f(-1f, -1f, -0.7f).normalizeLocal());
-        spot.setColor(ColorRGBA.White.mult(4f));
+        spot.setColor(ColorRGBA.White.mult(0.2f));
         spot.setSpotRange(1000f);
         spot.setSpotOuterAngle(FastMath.PI*0.25f);
         spot.setSpotInnerAngle(FastMath.PI*0.05f);
         rootNode.addLight(spot);
-        //rootNode.addLight(new DirectionalLight(new Vector3f(-1, -1, -1)));
-        //rootNode.addLight(new AmbientLight(ColorRGBA.White.mult(.1f)));
-        
-        for (int i = 0; i < numLights; i++) {
-            float angle = (FastMath.TWO_PI / numLights) * i;
-            Vector3f pos = new Vector3f(FastMath.cos(angle), 0f, FastMath.sin(angle));
-            pos.multLocal(25f).setY(-35f);
-            PointLight pl = new PointLight(pos, ColorRGBA.randomColor(), 20f);
-            rootNode.addLight(pl);
-        }
                 
-        //stateManager.attach(new DetailedProfilerState());
+        stateManager.attach(new DetailedProfilerState());
         
         cam.setLocation(new Vector3f(-25, 25, -25));
         cam.setFov(100);
-        flyCam.setMoveSpeed(50);
+        flyCam.setMoveSpeed(30);
         flyCam.setDragToRotate(true);
         
         FrameGraph fg = new FrameGraph(assetManager);
@@ -151,9 +139,20 @@ public class TestVoxelConeTracing extends SimpleApplication {
                 vct.getInputGroup(DynamicTicketList.class, "ShadowMaps"));
         
         out.makeInput(vct, "Result", "Color");
+        //out.makeInput(shadows, "LightContribution", "Color");
         //out.makeInput(depth, "Depth", "Color");
         
-        shadowMaps.addSpotLight(GraphSource.value(spot), 1024);
+        shadowMaps.addSpotLight(GraphSource.value(spot), 4096);
+        vct.setVoxelBounds(GraphSource.value(new BoundingBox(new Vector3f(0, 10.1f, 0), 20, 20, 20)));
+        vct.setVoxelGridSize(GraphSource.value(128));
+        
+        inputManager.addMapping("x+", new KeyTrigger(KeyInput.KEY_LEFT));
+        inputManager.addMapping("x-", new KeyTrigger(KeyInput.KEY_RIGHT));
+        inputManager.addMapping("y+", new KeyTrigger(KeyInput.KEY_RSHIFT));
+        inputManager.addMapping("y-", new KeyTrigger(KeyInput.KEY_RCONTROL));
+        inputManager.addMapping("z+", new KeyTrigger(KeyInput.KEY_UP));
+        inputManager.addMapping("z-", new KeyTrigger(KeyInput.KEY_DOWN));
+        inputManager.addListener(this, "x+,x-,y+,y-,z+,z-".split(","));
         
     }
     @Override
@@ -163,6 +162,17 @@ public class TestVoxelConeTracing extends SimpleApplication {
         }
         //spot.setPosition(cam.getLocation());
         //spot.setDirection(cam.getDirection());
+    }
+    @Override
+    public void onAnalog(String name, float value, float tpf) {
+        switch (name) {
+            case "x+": meshLight.move(moveSpeed * tpf, 0, 0); break;
+            case "x-": meshLight.move(-moveSpeed * tpf, 0, 0); break;
+            case "y+": meshLight.move(0, moveSpeed * tpf, 0); break;
+            case "y-": meshLight.move(0, -moveSpeed * tpf, 0); break;
+            case "z+": meshLight.move(0, 0, moveSpeed * tpf); break;
+            case "z-": meshLight.move(0, 0, -moveSpeed * tpf); break;
+        }
     }
     
 }
