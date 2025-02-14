@@ -1,3 +1,10 @@
+
+## Notice
+
+This project has been moved to the main [Renthyl repository](https://github.com/codex128/Renthyl). This repo is no longer being maintained.
+
+----
+
 Rendering models and techniques for JMonkeyEngine using [Renthyl](https://github.com/codex128/Renthyl) FrameGraphs. This project is still under development and may contain experimental features that do not work.
 
 [![](https://jitpack.io/v/codex128/RenthylPlus.svg)](https://jitpack.io/#codex128/RenthylPlus)
